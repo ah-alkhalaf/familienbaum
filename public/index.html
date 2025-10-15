@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Familienstammbaum</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- Wichtig: Module-Ladevorgang -->
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Admin-Panel (unsichtbar bis Alt+A oder ?admin=1) -->
+    <div id="panel" class="hidden">
+      <!-- Login -->
+      <div id="login">
+        <h3>Admin Login</h3>
+        <div class="field">
+          <label>Benutzername</label>
+          <input id="username" type="text" />
+        </div>
+        <div class="field">
+          <label>Passwort</label>
+          <input id="password" type="password" />
+        </div>
+        <button id="btnLogin">Login</button>
+      </div>
+
+      <!-- Verwaltung (nur sichtbar nach Login) -->
+      <div id="adminPanel" style="display:none">
+        <h3>Verwaltung</h3>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="add">➕ Hinzufügen</button>
+          <button class="tab" data-tab="rename">✏️ Umbenennen</button>
+          <button class="tab" data-tab="move">↔️ Verschieben</button>
+          <button class="tab" data-tab="delete">🗑️ Löschen</button>
+          <button class="tab" data-tab="backup">💾 Backups</button>
+        </div>
+
+        <!-- Hinzufügen -->
+        <div class="tab-content" id="tab-add">
+          <div class="field">
+            <label>Name</label>
+            <input id="addName" type="text" />
+          </div>
+          <div class="field">
+            <label>Vater auswählen (für Top-Level den Wurzelknoten wählen)</label>
+            <select id="addParent"></select>
+          </div>
+          <button id="btnAdd">Hinzufügen</button>
+        </div>
+
+        <!-- Umbenennen -->
+        <div class="tab-content hidden" id="tab-rename">
+          <div class="field">
+            <label>Mitglied</label>
+            <select id="renameTarget"></select>
+          </div>
+          <div class="field">
+            <label>Neuer Name</label>
+            <input id="renameNew" type="text" />
+          </div>
+          <button id="btnRename">Umbenennen</button>
+        </div>
+
+        <!-- Verschieben -->
+        <div class="tab-content hidden" id="tab-move">
+          <div class="field">
+            <label>Mitglied</label>
+            <select id="moveTarget"></select>
+          </div>
+          <div class="field">
+            <label>Neuer Vater</label>
+            <select id="moveParent"></select>
+          </div>
+          <button id="btnMove">Verschieben</button>
+        </div>
+
+        <!-- Löschen -->
+        <div class="tab-content hidden" id="tab-delete">
+          <div class="field">
+            <label>Mitglied</label>
+            <select id="deleteTarget"></select>
+          </div>
+          <button id="btnDelete" class="danger">Löschen</button>
+          <p class="hint">⚠️ Wurzelknoten kann nicht gelöscht werden.</p>
+        </div>
+
+        <!-- Backups -->
+        <div class="tab-content hidden" id="tab-backup">
+          <button id="btnExport">Export JSON</button>
+          <hr />
+          <label>Backups</label>
+          <select id="restoreSelect"></select>
+          <button id="btnRestore">Wiederherstellen</button>
+        </div>
+
+        <button id="btnLogout" class="secondary">Logout</button>
+      </div>
+    </div>
+
+    <!-- Zeichenfläche -->
+    <div id="stage">
+      <svg id="svg"></svg>
+    </div>
+  </div>
+</body>
+</html>
