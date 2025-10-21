@@ -92,6 +92,27 @@ function bindEvents() {
     if (result.success) { await reloadTree(); alert("Wiederhergestellt."); }
     else alert(result.message || "Restore fehlgeschlagen");
   });
+
+  document.getElementById("btnExport").addEventListener("click", async () => {
+  try {
+    await exportJson();
+  } catch (err) {
+    alert("Export fehlgeschlagen: " + err.message);
+  }
+});
+
+document.getElementById("btnRestore").addEventListener("click", async () => {
+  const filename = document.getElementById("restoreSelect").value;
+  if (!filename) return alert("Kein Backup ausgewählt.");
+  if (!confirm(`Backup ${filename} wiederherstellen?`)) return;
+  const result = await restoreBackup(filename);
+  if (result.success) {
+    alert("Backup erfolgreich wiederhergestellt!");
+    await reloadTree();
+  } else {
+    alert(result.message || "Fehler beim Wiederherstellen.");
+  }
+});
 }
 
 async function init() {
