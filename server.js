@@ -26,6 +26,41 @@ app.use(session({
 // ==== Pfade ====
 const FAMILY_PATH = path.join(__dirname, "family.json");
 const BACKUP_DIR = path.join(__dirname, "backups");
+/ Liste der Backups
+app.get("/backups", requireAuth, (req, res) => {
+  if (!fs.existsSync(BACKUP_DIR)) return res.json([]);
+  const files = fs.readdirSync(BACKUP_DIR)
+    .filter(f => f.startsWith("family.backup-") && f.endsWith(".json"))
+    .map(f => {
+      const stat = fs.statSync(path.join(BACKUP_DIR, f));
+      return { filename: f, mtime: stat.mtimeMs, size: stat.size };
+    })
+    .sort((a,b) => b.mtime - a.mtime);
+  res.json(files);
+});
+
+// Restore aus Backup
+app.post("/restore", requireAuth, (req, res) => {
+  const { filename } = req.body || {};
+  if (!filename || filename.includes("/") || filename.includes("\\")) {
+    return res.json({ success:false, message:"Ungültiger Dateiname." });
+  }
+  const backupPath = path.join(BACKUP_DIR, filename);
+  if (!fs.existsSync(backupPath)) {
+    return res.json({ success:false, message:"Backup nicht gefunden." });
+  }
+  const data = JSON.parse(fs.readFileSync(backupPath, "utf-8"));
+  fs.writeFileSync(FAMILY_PATH, JSON.stringify(data, null, 2), "utf-8");
+  res.json({ success:true });
+});
+
+// Export aktueller Stammbaum
+app.get("/export", requireAuth, (req, res) => {
+  const data = fs.readFileSync(FAMILY_PATH);
+  res.setHeader("Content-Disposition", "attachment; filename=family.json");
+  res.setHeader("Content-Type", "application/json");
+  res.send(data);
+});
 
 // ==== Hilfsfunktionen ====
 function walk(node, parent = null, fn) {
