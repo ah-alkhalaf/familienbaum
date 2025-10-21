@@ -26,7 +26,7 @@ app.use(session({
 // ==== Pfade ====
 const FAMILY_PATH = path.join(__dirname, "family.json");
 const BACKUP_DIR = path.join(__dirname, "backups");
-/ Liste der Backups
+// Liste der Backups
 app.get("/backups", requireAuth, (req, res) => {
   if (!fs.existsSync(BACKUP_DIR)) return res.json([]);
   const files = fs.readdirSync(BACKUP_DIR)
