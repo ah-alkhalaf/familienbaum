@@ -22,13 +22,7 @@
         {
           "_id": "082f016e-d070-4efa-b332-0b8d4aac75b6",
           "name": "مسند",
-          "children": [
-            {
-              "_id": "955ed862-ca72-4b86-a8b7-2a1ac8f2ab0e",
-              "name": "A",
-              "children": []
-            }
-          ]
+          "children": []
         }
       ]
     },
