@@ -218,7 +218,12 @@ app.post("/deletePerson", requireAuth, (req, res) => {
 // ==== Auth ====
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-
+    // ← HIER die console.logs einfügen
+  console.log("ENV USER:", process.env.ADMIN_USER);
+  console.log("ENV PASS:", process.env.ADMIN_PASS);
+  console.log("REQ USER:", username);
+  console.log("REQ PASS:", password);
+  
   if (
     username === process.env.ADMIN_USER &&
     password === process.env.ADMIN_PASS
