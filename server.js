@@ -7,6 +7,7 @@ const session = require("express-session");
 const crypto = require("crypto");
 
 const app = express();
+app.set("trust proxy", 1); // <- NEW
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -18,7 +19,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none", // <- edit from "lax"
+    secure: true,
     maxAge: 1000 * 60 * 60 // 1 Stunde
   }
 }));
