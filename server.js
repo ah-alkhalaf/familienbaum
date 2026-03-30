@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const https = require("https");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -96,33 +97,75 @@ function isDescendant(root, ancestorId, candidateId) {
   return found;
 }
 
-function loadFamily() {
-  if (!fs.existsSync(FAMILY_PATH)) {
-    const root = {
-      _id: "root",
-      name: "Ali",
-      children: []
-    };
-    fs.writeFileSync(FAMILY_PATH, JSON.stringify(root, null, 2), "utf-8");
-  }
+async function loadFamily() {
+  const token = process.env.GITHUB_TOKEN;
+  const repo = process.env.GITHUB_REPO;
+  const file = process.env.GITHUB_FILE;
 
-  const data = JSON.parse(fs.readFileSync(FAMILY_PATH, "utf-8"));
-  return data;
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: "api.github.com",
+      path: `/repos/${repo}/contents/${file}`,
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "User-Agent": "familienbaum-app",
+        "Accept": "application/vnd.github+json"
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => {
+        const json = JSON.parse(data);
+        const content = Buffer.from(json.content, "base64").toString("utf-8");
+        resolve({ data: JSON.parse(content), sha: json.sha });
+      });
+    });
+
+    req.on("error", reject);
+    req.end();
+  });
 }
 
-function saveFamily(data) {
-  if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR);
-  }
+async function saveFamily(data, sha) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo = process.env.GITHUB_REPO;
+  const file = process.env.GITHUB_FILE;
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  fs.writeFileSync(
-    path.join(BACKUP_DIR, `backup-${timestamp}.json`),
-    JSON.stringify(data, null, 2),
-    "utf-8"
-  );
+  const content = Buffer.from(JSON.stringify(data, null, 2)).toString("base64");
 
-  fs.writeFileSync(FAMILY_PATH, JSON.stringify(data, null, 2), "utf-8");
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      message: "Familienbaum aktualisiert",
+      content,
+      sha
+    });
+
+    const options = {
+      hostname: "api.github.com",
+      path: `/repos/${repo}/contents/${file}`,
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "User-Agent": "familienbaum-app",
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(body)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => resolve(JSON.parse(data)));
+    });
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 function requireAuth(req, res, next) {
@@ -134,86 +177,56 @@ function requireAuth(req, res, next) {
 
 // ==== API-Routen ====
 
-// ✅ Family anzeigen
-app.get("/family", (req, res) => {
-  const data = loadFamily();
+app.get("/family", async (req, res) => {
+  const { data } = await loadFamily();
   res.json(data);
 });
 
-// ✅ Person hinzufügen
-app.post("/addPerson", requireAuth, (req, res) => {
+app.post("/addPerson", requireAuth, async (req, res) => {
   const { name, parentId } = req.body;
-  const data = loadFamily();
-
+  const { data, sha } = await loadFamily();
   const parent = parentId ? findById(data, parentId) : data;
-  if (!parent) {
-    return res.json({ success: false, message: "Vater nicht gefunden" });
-  }
-
-  const newPerson = {
-    _id: crypto.randomUUID(),
-    name,
-    children: []
-  };
-
+  if (!parent) return res.json({ success: false, message: "Vater nicht gefunden" });
+  const newPerson = { _id: crypto.randomUUID(), name, children: [] };
   parent.children.push(newPerson);
-  saveFamily(data);
+  await saveFamily(data, sha);
   res.json({ success: true, data });
 });
 
-// ✅ Person umbenennen
-app.post("/renamePerson", requireAuth, (req, res) => {
+app.post("/renamePerson", requireAuth, async (req, res) => {
   const { id, newName } = req.body;
-  const data = loadFamily();
+  const { data, sha } = await loadFamily();
   const person = findById(data, id);
-
-  if (!person) {
-    return res.json({ success: false, message: "Person nicht gefunden" });
-  }
-
+  if (!person) return res.json({ success: false, message: "Person nicht gefunden" });
   person.name = newName;
-  saveFamily(data);
+  await saveFamily(data, sha);
   res.json({ success: true, data });
 });
 
-// ✅ Person verschieben
-app.post("/movePerson", requireAuth, (req, res) => {
+app.post("/movePerson", requireAuth, async (req, res) => {
   const { id, newParentId } = req.body;
-  const data = loadFamily();
-
+  const { data, sha } = await loadFamily();
   const person = findById(data, id);
   const oldParent = findParentOf(data, id);
   const newParent = findById(data, newParentId);
-
-  if (!person || !oldParent || !newParent) {
-    return res.json({ success: false, message: "Ungültige ID(s)" });
-  }
-
-  if (isDescendant(person, id, newParentId)) {
-    return res.json({ success: false, message: "Kann nicht zu Nachkomme verschoben werden" });
-  }
-
+  if (!person || !oldParent || !newParent) return res.json({ success: false, message: "Ungültige ID(s)" });
+  if (isDescendant(person, id, newParentId)) return res.json({ success: false, message: "Kann nicht zu Nachkomme verschoben werden" });
   oldParent.children = oldParent.children.filter(c => c._id !== id);
   newParent.children.push(person);
-
-  saveFamily(data);
+  await saveFamily(data, sha);
   res.json({ success: true, data });
 });
 
-// ✅ Person löschen
-app.post("/deletePerson", requireAuth, (req, res) => {
+app.post("/deletePerson", requireAuth, async (req, res) => {
   const { id } = req.body;
-  const data = loadFamily();
+  const { data, sha } = await loadFamily();
   const parent = findParentOf(data, id);
-
-  if (!parent) {
-    return res.json({ success: false, message: "Stammbaum kann nicht gelöscht werden" });
-  }
-
+  if (!parent) return res.json({ success: false, message: "Stammbaum kann nicht gelöscht werden" });
   parent.children = parent.children.filter(c => c._id !== id);
-  saveFamily(data);
+  await saveFamily(data, sha);
   res.json({ success: true, data });
 });
+
 
 // ==== Auth ====
 app.post("/login", (req, res) => {
