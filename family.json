@@ -42,7 +42,38 @@
                                 {
                                   "_id": "9873c668-d5b3-4a3a-bb84-29b9b35879ee",
                                   "name": "خلف",
-                                  "children": []
+                                  "children": [
+                                    {
+                                      "_id": "084a89d8-b3a0-423d-8d52-a0e07dc4b4ba",
+                                      "name": "مالك",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "db265da8-59d7-4c45-911a-e403dfa5af3a",
+                                      "name": "طارق",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "2c8c229e-ab3e-4d56-9142-ec034cd1eba2",
+                                      "name": "زياد",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "895d81d3-6519-498f-858e-5862d25ca12a",
+                                      "name": "مثنى",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "c4131f8c-a6d4-4038-860b-f57c360d5813",
+                                      "name": "خالد",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "d2d33254-5a03-4492-bc7b-969e642731ff",
+                                      "name": "أحمد",
+                                      "children": []
+                                    }
+                                  ]
                                 },
                                 {
                                   "_id": "d528209e-d52e-4319-b641-1bd6014dc960",
