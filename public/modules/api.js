@@ -14,6 +14,17 @@ export async function addPerson(name, parentId) {
   return res.json();
 }
 
+// إضافة عدة أبناء دفعة واحدة
+export async function addMultiplePeople(names, parentId) {
+  const res = await fetch("/addMultiple", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ names, parentId })
+  });
+  return res.json();
+}
+
 export async function renamePerson(id, newName) {
   const res = await fetch("/renamePerson", {
     method: "POST",
@@ -44,15 +55,27 @@ export async function deletePerson(id) {
   return res.json();
 }
 
+// تعيين المؤسس (المبرمج)
+export async function setFounder(id) {
+  const res = await fetch("/setFounder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ id })
+  });
+  return res.json();
+}
+
 export function exportJson() {
   window.location.href = "/export";
 }
 
 export async function listBackups() {
   const res = await fetch("/backups", { credentials: "same-origin" });
-  if (res.status === 401) return []; // nicht eingeloggt
+  if (res.status === 401) return [];
   return res.json();
 }
+
 export async function restoreBackup(filename) {
   const res = await fetch("/restore", {
     method: "POST",

@@ -1,6 +1,6 @@
 // main.js (ES-Module)
 import { checkAuth, login, logout } from './modules/auth.js';
-import { loadFamily, addPerson, renamePerson, movePerson, deletePerson, exportJson, listBackups, restoreBackup } from './modules/api.js';
+import { loadFamily, addPerson, addMultiplePeople, renamePerson, movePerson, deletePerson, exportJson, listBackups, restoreBackup, setFounder } from './modules/api.js';
 import { populateAllDropdowns, initTabs, togglePanelHotkey } from './modules/ui.js';
 import { initTree, renderTree } from './modules/tree.js';
 
@@ -31,7 +31,7 @@ function bindEvents() {
       updateAdminUI();
       await reloadTree();
     } else {
-      alert(result.message || "Login fehlgeschlagen");
+      alert(result.message || "فشل تسجيل الدخول");
     }
   });
 
@@ -41,82 +41,87 @@ function bindEvents() {
     updateAdminUI();
   });
 
+  // إضافة شخص أو عدة أشخاص
   document.getElementById("btnAdd").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
-    const name = document.getElementById("addName").value.trim();
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
+    const raw = document.getElementById("addName").value.trim();
     const parentId = document.getElementById("addParent").value || null;
-    if (!name) return alert("Name erforderlich.");
-    const result = await addPerson(name, parentId);
-    if (result.success) { await reloadTree(); document.getElementById("addName").value = ""; }
-    else alert(result.message || "Fehler beim Hinzufügen");
+    if (!raw) return alert("أدخل اسماً واحداً على الأقل.");
+
+    // تقسيم بالفاصلة أو الفاصلة المنقوطة
+    const names = raw.split(/[,،;]/).map(n => n.trim()).filter(n => n.length > 0);
+
+    let result;
+    if (names.length === 1) {
+      result = await addPerson(names[0], parentId);
+    } else {
+      result = await addMultiplePeople(names, parentId);
+    }
+
+    if (result.success) {
+      await reloadTree();
+      document.getElementById("addName").value = "";
+    } else {
+      alert(result.message || "خطأ في الإضافة");
+    }
   });
 
   document.getElementById("btnRename").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
     const id = document.getElementById("renameTarget").value;
     const newName = document.getElementById("renameNew").value.trim();
-    if (!id || !newName) return alert("Felder ausfüllen.");
+    if (!id || !newName) return alert("يرجى ملء جميع الحقول.");
     const result = await renamePerson(id, newName);
     if (result.success) { await reloadTree(); document.getElementById("renameNew").value = ""; }
-    else alert(result.message || "Fehler beim Umbenennen");
+    else alert(result.message || "خطأ في تغيير الاسم");
   });
 
   document.getElementById("btnMove").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
     const id = document.getElementById("moveTarget").value;
     const newParentId = document.getElementById("moveParent").value;
-    if (!id || !newParentId) return alert("Ungültige Auswahl.");
-    if (id === newParentId) return alert("Ein Mitglied kann nicht sein eigener Vater sein.");
+    if (!id || !newParentId) return alert("اختيار غير صالح.");
+    if (id === newParentId) return alert("لا يمكن أن يكون الشخص أباً لنفسه.");
     const result = await movePerson(id, newParentId);
-    if (result.success) await reloadTree(); else alert(result.message || "Fehler beim Verschieben");
+    if (result.success) await reloadTree();
+    else alert(result.message || "خطأ في النقل");
   });
 
   document.getElementById("btnDelete").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
     const id = document.getElementById("deleteTarget").value;
-    if (!id) return alert("Mitglied wählen.");
-    if (!confirm("Wirklich löschen? (inkl. Nachkommen)")) return;
+    if (!id) return alert("اختر شخصاً.");
+    if (!confirm("هل تريد الحذف؟ (سيُحذف مع جميع أبنائه)")) return;
     const result = await deletePerson(id);
-    if (result.success) { await reloadTree(); alert("✅ Person gelöscht"); }
-    else alert(result.message || "Fehler beim Löschen");
+    if (result.success) { await reloadTree(); }
+    else alert(result.message || "خطأ في الحذف");
   });
 
-  document.getElementById("btnExport").addEventListener("click", () => exportJson());
-  document.getElementById("btnRestore").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
-    const sel = document.getElementById("restoreSelect");
-    const filename = sel.value;
-    if (!filename) return alert("Backup wählen.");
-    if (!confirm("Backup wirklich wiederherstellen?")) return;
-    const result = await restoreBackup(filename);
-    if (result.success) { await reloadTree(); alert("Wiederhergestellt."); }
-    else alert(result.message || "Restore fehlgeschlagen");
+  // تعيين المؤسس
+  document.getElementById("btnSetFounder").addEventListener("click", async () => {
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
+    const id = document.getElementById("founderTarget").value;
+    if (!id) return alert("اختر شخصاً.");
+    const result = await setFounder(id);
+    if (result.success) { await reloadTree(); alert("✅ تم تعيين المؤسس"); }
+    else alert(result.message || "خطأ");
   });
 
   document.getElementById("btnExport").addEventListener("click", async () => {
-  try {
-    await exportJson();
-  } catch (err) {
-    alert("Export fehlgeschlagen: " + err.message);
-  }
-});
+    try { exportJson(); } catch (err) { alert("فشل التصدير: " + err.message); }
+  });
 
-document.getElementById("btnRestore").addEventListener("click", async () => {
-  const filename = document.getElementById("restoreSelect").value;
-  if (!filename) return alert("Kein Backup ausgewählt.");
-  if (!confirm(`Backup ${filename} wiederherstellen?`)) return;
-  const result = await restoreBackup(filename);
-  if (result.success) {
-    alert("Backup erfolgreich wiederhergestellt!");
-    await reloadTree();
-  } else {
-    alert(result.message || "Fehler beim Wiederherstellen.");
-  }
-});
+  document.getElementById("btnRestore").addEventListener("click", async () => {
+    const filename = document.getElementById("restoreSelect").value;
+    if (!filename) return alert("لم يتم اختيار نسخة احتياطية.");
+    if (!confirm(`استعادة النسخة: ${filename}؟`)) return;
+    const result = await restoreBackup(filename);
+    if (result.success) { alert("تمت الاستعادة بنجاح!"); await reloadTree(); }
+    else alert(result.message || "خطأ في الاستعادة.");
+  });
 }
 
 async function init() {
-  // Panel per Tastatur & ?admin=1
   togglePanelHotkey(panel, app);
   initTabs();
 
@@ -126,14 +131,14 @@ async function init() {
   initTree("#svg");
   await reloadTree();
 
-  const backups = await listBackups().catch(()=>[]);
+  const backups = await listBackups().catch(() => []);
   const sel = document.getElementById("restoreSelect");
   if (sel && backups?.forEach) {
     sel.innerHTML = "";
     backups.forEach(b => {
       const opt = document.createElement("option");
       opt.value = b.filename;
-      opt.textContent = `${b.filename} (${Math.round(b.size/1024)} KB)`;
+      opt.textContent = `${b.filename} (${Math.round(b.size / 1024)} KB)`;
       sel.appendChild(opt);
     });
   }

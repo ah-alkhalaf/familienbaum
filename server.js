@@ -227,6 +227,46 @@ app.post("/deletePerson", requireAuth, async (req, res) => {
   res.json({ success: true, data });
 });
 
+// ✅ إضافة عدة أشخاص دفعة واحدة
+app.post("/addMultiple", requireAuth, async (req, res) => {
+  const { names, parentId } = req.body;
+  if (!Array.isArray(names) || names.length === 0) {
+    return res.json({ success: false, message: "لا توجد أسماء" });
+  }
+  const { data, sha } = await loadFamily();
+  const parent = parentId ? findById(data, parentId) : data;
+  if (!parent) return res.json({ success: false, message: "الأب غير موجود" });
+
+  names.forEach(name => {
+    if (name.trim()) {
+      parent.children.push({ _id: crypto.randomUUID(), name: name.trim(), children: [] });
+    }
+  });
+
+  await saveFamily(data, sha);
+  res.json({ success: true, data });
+});
+
+// ✅ تعيين المؤسس (المبرمج)
+app.post("/setFounder", requireAuth, async (req, res) => {
+  const { id } = req.body;
+  const { data, sha } = await loadFamily();
+
+  // إزالة isFounder من جميع العقد أولاً
+  function clearFounder(node) {
+    delete node.isFounder;
+    (node.children || []).forEach(clearFounder);
+  }
+  clearFounder(data);
+
+  // تعيين المؤسس الجديد
+  const person = findById(data, id);
+  if (!person) return res.json({ success: false, message: "الشخص غير موجود" });
+  person.isFounder = true;
+
+  await saveFamily(data, sha);
+  res.json({ success: true, data });
+});
 
 // ==== Auth ====
 app.post("/login", (req, res) => {
