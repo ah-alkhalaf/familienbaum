@@ -421,3 +421,32 @@ svg#svg {
 
 /* ===================== ADMIN TOGGLE WRAPPER ===================== */
 #adminToggleWrapper { display: flex; align-items: center; }
+
+/* ===================== GITHUB LINK ===================== */
+.github-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.github-link:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: rgba(200,169,110,0.3);
+}
+
+/* RTL fix für adminToggleWrapper */
+#adminToggleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
