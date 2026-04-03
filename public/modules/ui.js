@@ -1,5 +1,4 @@
 // ui.js
-
 export function togglePanelHotkey(panel, app) {
   // Start: Panel ist garantiert versteckt
   panel.classList.add("hidden");
@@ -35,24 +34,38 @@ export function initTabs() {
 
 export function populateAllDropdowns(data) {
   const items = [];
-  (function walk(n){ items.push({id:n._id,name:n.name}); (n.children||[]).forEach(walk); })(data);
 
-  const fill = (id, filter=()=>true) => {
+  // Walk mit Vater-Name
+  (function walk(n, parentName) {
+    items.push({
+      id: n._id,
+      name: n.name,
+      parentName: parentName || null
+    });
+    (n.children || []).forEach(child => walk(child, n.name));
+  })(data, null);
+
+  // Label: "Name  (Vater: XYZ)" — nur wenn Vater existiert
+  const label = (item) => {
+    if (item.parentName) return `${item.name}  (${item.parentName})`;
+    return item.name;
+  };
+
+  const fill = (id, filter = () => true) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.innerHTML = "";
-    items.filter(filter).forEach(n=>{
+    items.filter(filter).forEach(n => {
       const opt = document.createElement("option");
       opt.value = n.id;
-      opt.textContent = n.name;
+      opt.textContent = label(n);
       el.appendChild(opt);
     });
   };
 
-  // Root (data._id) nicht für rename/move/delete anbieten
-  fill("addParent");                          // inkl. Root → Top-Level möglich
+  fill("addParent");                           // inkl. Root → Top-Level möglich
   fill("renameTarget", n => n.id !== data._id);
   fill("moveTarget",   n => n.id !== data._id);
-  fill("moveParent");                         // inkl. Root
+  fill("moveParent");                          // inkl. Root
   fill("deleteTarget", n => n.id !== data._id);
 }
