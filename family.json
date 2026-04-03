@@ -71,7 +71,8 @@
                                     {
                                       "_id": "d2d33254-5a03-4492-bc7b-969e642731ff",
                                       "name": "أحمد",
-                                      "children": []
+                                      "children": [],
+                                      "isFounder": true
                                     }
                                   ]
                                 },
