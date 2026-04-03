@@ -18,7 +18,13 @@
         {
           "_id": "082f016e-d070-4efa-b332-0b8d4aac75b6",
           "name": "مسند",
-          "children": []
+          "children": [
+            {
+              "_id": "4f28cd1f-17a1-4850-b084-f64004ff41ec",
+              "name": "مسعد",
+              "children": []
+            }
+          ]
         }
       ]
     },
