@@ -18,19 +18,7 @@
         {
           "_id": "082f016e-d070-4efa-b332-0b8d4aac75b6",
           "name": "مسند",
-          "children": [
-            {
-              "_id": "9d84dcf4-4a1b-4533-ae74-884d5577e0c7",
-              "name": "A",
-              "children": [
-                {
-                  "_id": "59fa6ded-2c58-427a-90b0-a852bebdec14",
-                  "name": "B",
-                  "children": []
-                }
-              ]
-            }
-          ]
+          "children": []
         }
       ]
     },
