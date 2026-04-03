@@ -71,7 +71,13 @@
                                     {
                                       "_id": "d2d33254-5a03-4492-bc7b-969e642731ff",
                                       "name": "أحمد",
-                                      "children": [],
+                                      "children": [
+                                        {
+                                          "_id": "8838769a-ee2f-4350-a3cf-5488d9f78e9b",
+                                          "name": "وسام",
+                                          "children": []
+                                        }
+                                      ],
                                       "isFounder": true
                                     }
                                   ]
