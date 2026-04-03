@@ -58,7 +58,23 @@
                                 {
                                   "_id": "ba47c4cd-accd-4bcb-ab33-fe9926a76613",
                                   "name": "خليف",
-                                  "children": []
+                                  "children": [
+                                    {
+                                      "_id": "75bb9c52-bc5b-4f4e-b25f-c1b53ba4e517",
+                                      "name": "هيثم",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "c0296157-323a-4291-9219-7d283ead6e2d",
+                                      "name": "محمد",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "d76e9f8b-1158-44df-a709-dd7cc55bc630",
+                                      "name": "خالد",
+                                      "children": []
+                                    }
+                                  ]
                                 }
                               ]
                             }
