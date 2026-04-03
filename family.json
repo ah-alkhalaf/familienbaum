@@ -46,7 +46,18 @@
                                     {
                                       "_id": "084a89d8-b3a0-423d-8d52-a0e07dc4b4ba",
                                       "name": "مالك",
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "_id": "745f8abc-55fc-43b3-9f95-862779a23df4",
+                                          "name": "حمزة",
+                                          "children": []
+                                        },
+                                        {
+                                          "_id": "2474feb5-ea6a-408f-b908-0d72ee684ecf",
+                                          "name": "حيدرة",
+                                          "children": []
+                                        }
+                                      ]
                                     },
                                     {
                                       "_id": "db265da8-59d7-4c45-911a-e403dfa5af3a",
