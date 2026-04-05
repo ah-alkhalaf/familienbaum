@@ -103,7 +103,13 @@
                                     {
                                       "_id": "48c3e26d-d051-4bc0-9038-308a35c9ee6c",
                                       "name": "حسين",
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "_id": "7a725e39-e6b0-4f4b-a45c-cc3686d6e6e7",
+                                          "name": "فيصل",
+                                          "children": []
+                                        }
+                                      ]
                                     },
                                     {
                                       "_id": "1c1763f8-31b5-4e46-8ad8-160141b27ca9",
