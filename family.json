@@ -21,7 +21,18 @@
                 {
                   "_id": "9a875bd0-2a82-41d5-a60d-1f072c2b1b1f",
                   "name": "بكر",
-                  "children": []
+                  "children": [
+                    {
+                      "_id": "6b6f74e6-0667-4957-8757-3ed87db34961",
+                      "name": "عوض",
+                      "children": []
+                    },
+                    {
+                      "_id": "202dcba6-1c97-4ee5-970c-b3e36d8c1df9",
+                      "name": "محمد",
+                      "children": []
+                    }
+                  ]
                 }
               ]
             },
