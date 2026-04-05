@@ -128,7 +128,23 @@
                                     {
                                       "_id": "538621c2-ad2f-4c47-917e-d8cd78e1abb8",
                                       "name": "فهد",
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "_id": "ecfa07d3-337c-44f5-8028-cbdb92d4c8be",
+                                          "name": "علي",
+                                          "children": []
+                                        },
+                                        {
+                                          "_id": "46a91378-b1db-4bda-a2a4-727683f9828e",
+                                          "name": "محمد",
+                                          "children": []
+                                        },
+                                        {
+                                          "_id": "63507d81-2a6f-44b0-b9a3-c9d9a3d306e6",
+                                          "name": "عبد العزيز",
+                                          "children": []
+                                        }
+                                      ]
                                     },
                                     {
                                       "_id": "e8e0ad84-78ce-4c38-a93d-ad487e4a109e",
