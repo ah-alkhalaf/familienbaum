@@ -98,7 +98,13 @@
                                     {
                                       "_id": "481c4097-66b4-4a6b-8d99-8d438f334cc8",
                                       "name": "علي",
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "_id": "c7efc604-d858-44fc-875f-7b19e12d41d0",
+                                          "name": "حسين",
+                                          "children": []
+                                        }
+                                      ]
                                     },
                                     {
                                       "_id": "aacd910c-8eca-48a7-a2fe-4ee045e89a87",
