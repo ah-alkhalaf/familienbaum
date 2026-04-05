@@ -29,7 +29,13 @@
                         {
                           "_id": "0ea2b262-be9d-42c4-ba9f-fbccb1ffe580",
                           "name": "محمد",
-                          "children": []
+                          "children": [
+                            {
+                              "_id": "66f00e0e-bcd4-4625-b0a7-ac9ba6caf8dc",
+                              "name": "العيط",
+                              "children": []
+                            }
+                          ]
                         }
                       ]
                     },
