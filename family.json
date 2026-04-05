@@ -66,7 +66,18 @@
                                 {
                                   "_id": "e1c8ed21-2ce7-4859-b49b-b9c8db49218a",
                                   "name": "ناوي",
-                                  "children": []
+                                  "children": [
+                                    {
+                                      "_id": "75beba42-d7cd-4f48-b1cc-ecc345e30950",
+                                      "name": "جمعة",
+                                      "children": []
+                                    },
+                                    {
+                                      "_id": "6fcaa13d-b4cb-48e9-9870-3512402d2734",
+                                      "name": "ثويني",
+                                      "children": []
+                                    }
+                                  ]
                                 }
                               ]
                             }
