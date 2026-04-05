@@ -513,7 +513,13 @@
                             {
                               "_id": "2403dc99-5e2a-4a4b-a951-87d7dbd82a33",
                               "name": "دحيل",
-                              "children": []
+                              "children": [
+                                {
+                                  "_id": "121bfa98-2b53-4cbc-a12f-24bdb1cee522",
+                                  "name": "الحلو",
+                                  "children": []
+                                }
+                              ]
                             }
                           ]
                         }
