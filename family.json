@@ -440,7 +440,28 @@
                             {
                               "_id": "176f5cd1-6533-4200-8d64-42efe8db39bf",
                               "name": "زغير",
-                              "children": []
+                              "children": [
+                                {
+                                  "_id": "bd60ff91-1a64-4423-847a-4860d8178238",
+                                  "name": "عكاش",
+                                  "children": []
+                                },
+                                {
+                                  "_id": "b9e8f4b4-adda-40f4-bb50-ea8c4c2603d6",
+                                  "name": "مخيلف",
+                                  "children": []
+                                },
+                                {
+                                  "_id": "068eba37-6e37-4465-a135-ebb3c6bf86ce",
+                                  "name": "فليح",
+                                  "children": []
+                                },
+                                {
+                                  "_id": "af08038c-e705-41ea-bd23-cfa27bbfd22a",
+                                  "name": "مبارك",
+                                  "children": []
+                                }
+                              ]
                             }
                           ]
                         }
