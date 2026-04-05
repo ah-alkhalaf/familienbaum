@@ -95,7 +95,18 @@
                             {
                               "_id": "b7f272d0-3faf-431e-a86f-a37381fd83d8",
                               "name": "عشوي",
-                              "children": []
+                              "children": [
+                                {
+                                  "_id": "25128ff2-5f8f-41ac-bb87-6ba4b96e2d4a",
+                                  "name": "علي",
+                                  "children": []
+                                },
+                                {
+                                  "_id": "6fc9a22a-3874-4bb1-b88f-ff55139f8aad",
+                                  "name": "نجرس",
+                                  "children": []
+                                }
+                              ]
                             }
                           ]
                         }
