@@ -517,7 +517,13 @@
                                 {
                                   "_id": "121bfa98-2b53-4cbc-a12f-24bdb1cee522",
                                   "name": "الحلو",
-                                  "children": []
+                                  "children": [
+                                    {
+                                      "_id": "e5bc149f-c53b-419d-b6ec-a50ccd6de4fb",
+                                      "name": "احمد",
+                                      "children": []
+                                    }
+                                  ]
                                 }
                               ]
                             }
