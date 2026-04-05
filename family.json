@@ -147,7 +147,13 @@
                                     {
                                       "_id": "8efbf26e-6ae6-4cbb-805d-f45e91131f70",
                                       "name": "عبيد",
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "_id": "bb7cb9ff-bdad-4189-bd8a-fad40046aa93",
+                                          "name": "سلطان",
+                                          "children": []
+                                        }
+                                      ]
                                     }
                                   ]
                                 }
