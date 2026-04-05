@@ -33,7 +33,13 @@
                             {
                               "_id": "66f00e0e-bcd4-4625-b0a7-ac9ba6caf8dc",
                               "name": "العيط",
-                              "children": []
+                              "children": [
+                                {
+                                  "_id": "56665152-304b-48c7-88b0-c5814a111887",
+                                  "name": "محمد",
+                                  "children": []
+                                }
+                              ]
                             }
                           ]
                         }
