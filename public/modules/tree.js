@@ -1,5 +1,5 @@
 // modules/tree.js
-let svg, zoomLayer, content, zoom;
+let svg, zoomLayer, content, zoom, tooltip;
 
 export function initTree(selector) {
   svg = d3.select(selector);
@@ -8,13 +8,33 @@ export function initTree(selector) {
   zoom = d3.zoom().scaleExtent([0.3, 3]).on("zoom", (e) => zoomLayer.attr("transform", e.transform));
   svg.call(zoom);
 
-  // فلتر الـ glow للمؤسس
+  // فلتر الـ glow
   const defs = svg.append("defs");
   const filter = defs.append("filter").attr("id", "glow");
   filter.append("feGaussianBlur").attr("stdDeviation", "4").attr("result", "coloredBlur");
   const feMerge = filter.append("feMerge");
   feMerge.append("feMergeNode").attr("in", "coloredBlur");
   feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+  // Tooltip عائم
+  tooltip = d3.select("body").append("div")
+    .attr("id", "tree-tooltip")
+    .style("position", "fixed")
+    .style("background", "rgba(15,17,23,0.95)")
+    .style("border", "1px solid #c8a96e")
+    .style("border-radius", "10px")
+    .style("padding", "10px 14px")
+    .style("color", "#c8a96e")
+    .style("font-family", "'DM Sans', system-ui, sans-serif")
+    .style("font-size", "13px")
+    .style("pointer-events", "none")
+    .style("opacity", "0")
+    .style("transition", "opacity 0.2s ease")
+    .style("z-index", "9999")
+    .style("max-width", "200px")
+    .style("line-height", "1.6")
+    .style("direction", "rtl")
+    .style("text-align", "right");
 }
 
 // 30 لوناً لكل جيل
@@ -53,18 +73,41 @@ const palette = [
 
 const getP = (depth) => palette[depth % palette.length];
 
-let rootData = null; // نحفظ البيانات الأصلية
+let rootData = null;
+let initialized = false;
+
+// طي كل العقد التي عمقها >= المستوى المحدد
+function collapseFromDepth(node, maxDepth, currentDepth = 0) {
+  if (currentDepth >= maxDepth && node.children && node.children.length > 0) {
+    node._collapsed = true;
+  } else {
+    node._collapsed = false;
+  }
+  (node.children || []).forEach(child => collapseFromDepth(child, maxDepth, currentDepth + 1));
+}
+
+// هل يوجد مؤسس في أبناء هذه العقدة
+function hasFounderDescendant(node) {
+  if (node.isFounder) return true;
+  return (node.children || []).some(hasFounderDescendant);
+}
 
 export function renderTree(data) {
   if (!svg) initTree("#svg");
   rootData = data;
+
+  // عند أول تحميل فقط: طي من المستوى 3 فما فوق
+  if (!initialized) {
+    collapseFromDepth(rootData, 3);
+    initialized = true;
+  }
+
   _render(data);
 }
 
 function _render(data) {
   content.selectAll("*").remove();
 
-  // نسخ البيانات مع دعم الطي
   const root = d3.hierarchy(data, d => d._collapsed ? null : d.children);
 
   const { width, height } = svg.node().getBoundingClientRect();
@@ -94,10 +137,37 @@ function _render(data) {
     .attr("transform", d => `translate(${d.x},${d.y})`)
     .style("cursor", d => (d.data.children && d.data.children.length > 0) ? "pointer" : "default")
     .on("click", (event, d) => {
-      // الطي والفتح عند الضغط
       if (!d.data.children || d.data.children.length === 0) return;
       d.data._collapsed = !d.data._collapsed;
       _render(rootData);
+    })
+    // Tooltip للمؤسس
+    .on("mouseover", function(event, d) {
+      const isFounderBranch = d.data.isFounder || hasFounderDescendant(d.data);
+      if (!isFounderBranch) return;
+
+      let msg = "";
+      if (d.data.isFounder) {
+        msg = `💻 مؤسس الصفحة<br/>هذا الشخص أنشأ وبنى شجرة العائلة`;
+      } else if (d.data._collapsed && hasFounderDescendant(d.data)) {
+        msg = `💻 يوجد مؤسس الصفحة<br/>في هذا الفرع المطوي`;
+      } else {
+        msg = `💻 فرع يحتوي على<br/>مؤسس الصفحة`;
+      }
+
+      tooltip
+        .html(msg)
+        .style("opacity", "1")
+        .style("left", (event.clientX + 14) + "px")
+        .style("top", (event.clientY - 10) + "px");
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.clientX + 14) + "px")
+        .style("top", (event.clientY - 10) + "px");
+    })
+    .on("mouseout", function() {
+      tooltip.style("opacity", "0");
     });
 
   // ---- الجذر ----
@@ -121,7 +191,6 @@ function _render(data) {
       .attr("font-size", "15px").attr("font-weight", "700")
       .attr("fill", "#0f1117")
       .text(d.data.name);
-    // عدد الأبناء المطوية
     _addCollapseIndicator(g, d);
   });
 
@@ -164,12 +233,26 @@ function _render(data) {
   node.filter(d => d.depth !== 0 && !d.data.isFounder).each(function(d) {
     const g = d3.select(this);
     const p = getP(d.depth);
+
+    // إطار ذهبي خفيف إذا كان الفرع يحتوي مؤسساً ومطوياً
+    const hiddenFounder = d.data._collapsed && hasFounderDescendant(d.data);
+    if (hiddenFounder) {
+      g.append("rect")
+        .attr("x", -63).attr("y", -23).attr("width", 126).attr("height", 46)
+        .attr("rx", 21).attr("ry", 21)
+        .attr("fill", "none")
+        .attr("stroke", "#c8a96e")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3,3")
+        .attr("opacity", 0.5);
+    }
+
     g.append("rect")
       .attr("x", -60).attr("y", -20).attr("width", 120).attr("height", 40)
       .attr("rx", 18).attr("ry", 18)
       .attr("fill", p.fill)
-      .attr("stroke", p.stroke)
-      .attr("stroke-width", 1.5);
+      .attr("stroke", hiddenFounder ? "#c8a96e" : p.stroke)
+      .attr("stroke-width", hiddenFounder ? 2 : 1.5);
     g.append("text")
       .attr("dy", 6).attr("text-anchor", "middle")
       .attr("font-family", "'DM Sans', system-ui, sans-serif")
@@ -190,13 +273,11 @@ function _render(data) {
   }
 }
 
-// مؤشر الطي — دائرة صغيرة في الأسفل تعرض عدد الأبناء
 function _addCollapseIndicator(g, d) {
   if (!d.data.children || d.data.children.length === 0) return;
   const count = d.data.children.length;
   const collapsed = d.data._collapsed;
 
-  // دائرة صغيرة
   g.append("circle")
     .attr("cx", 0).attr("cy", 26)
     .attr("r", 10)
@@ -204,7 +285,6 @@ function _addCollapseIndicator(g, d) {
     .attr("stroke", "#c8a96e")
     .attr("stroke-width", 1.5);
 
-  // رقم أو سهم
   g.append("text")
     .attr("x", 0).attr("y", 30)
     .attr("text-anchor", "middle")
