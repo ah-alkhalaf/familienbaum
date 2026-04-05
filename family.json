@@ -373,7 +373,18 @@
                         {
                           "_id": "276e8966-1cc3-4fba-b2ce-2c83079ca6f0",
                           "name": "نهابه",
-                          "children": []
+                          "children": [
+                            {
+                              "_id": "247b06a5-3153-4d23-9f5e-17368c4147f4",
+                              "name": "عايش",
+                              "children": []
+                            },
+                            {
+                              "_id": "da270df9-ae52-4c57-ba0e-821b953086a6",
+                              "name": "كويم",
+                              "children": []
+                            }
+                          ]
                         }
                       ]
                     }
