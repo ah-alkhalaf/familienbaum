@@ -37,7 +37,13 @@
                                 {
                                   "_id": "56665152-304b-48c7-88b0-c5814a111887",
                                   "name": "محمد",
-                                  "children": []
+                                  "children": [
+                                    {
+                                      "_id": "0c0d7893-4f1b-4a8a-aace-c945f85bcb1c",
+                                      "name": "ثامر",
+                                      "children": []
+                                    }
+                                  ]
                                 }
                               ]
                             }
