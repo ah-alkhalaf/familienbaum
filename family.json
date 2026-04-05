@@ -444,7 +444,13 @@
                                 {
                                   "_id": "bd60ff91-1a64-4423-847a-4860d8178238",
                                   "name": "عكاش",
-                                  "children": []
+                                  "children": [
+                                    {
+                                      "_id": "8efd7ba9-4df4-4a1e-a22e-84a3bb34a55d",
+                                      "name": "صفوق",
+                                      "children": []
+                                    }
+                                  ]
                                 },
                                 {
                                   "_id": "b9e8f4b4-adda-40f4-bb50-ea8c4c2603d6",
