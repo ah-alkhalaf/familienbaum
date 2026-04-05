@@ -114,7 +114,13 @@
                                     {
                                       "_id": "56a7bf33-2ca2-4d0c-ac4c-97be027359dd",
                                       "name": "عبد الله",
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "_id": "172a3c53-dd92-4045-8fe1-49227fa5ae14",
+                                          "name": "مبارك",
+                                          "children": []
+                                        }
+                                      ]
                                     },
                                     {
                                       "_id": "9e411165-cfa2-4389-ba43-c9adbd709da1",
