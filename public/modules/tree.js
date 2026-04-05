@@ -18,7 +18,7 @@ export function renderTree(data) {
 
   // مسافات أكبر بين العقد للهاتف
   const nodeWidth  = 160;
-  const nodeHeight = 100;
+  const nodeHeight = 140;
   const treeWidth  = Math.max(root.leaves().length * nodeWidth, width - 40);
   const treeHeight = Math.max((root.height + 1) * nodeHeight, height - 40);
 
@@ -70,7 +70,7 @@ export function renderTree(data) {
     .attr("fill", "none")
     .attr("stroke", d => getP(d.source.depth).stroke)
     .attr("stroke-width", 1.5)
-    .attr("opacity", 0.4);
+    .attr("opacity", 0.15);
 
   const node = content.selectAll(".node")
     .data(root.descendants())
