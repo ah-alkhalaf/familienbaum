@@ -451,3 +451,91 @@ svg#svg {
   align-items: center;
   gap: 8px;
 }
+/* ===================== SEARCH ===================== */
+#searchWrapper {
+display: flex;
+align-items: center;
+gap: 8px;
+position: relative;
+}
+
+.search-icon-btn {
+  width: auto;
+  padding: 7px 12px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.search-icon-btn:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: rgba(200,169,110,0.3);
+  box-shadow: none;
+  transform: none;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+  border-radius: 99px;
+  padding: 4px 10px 4px 14px;
+  animation: fadeUp 0.18s ease;
+}
+
+.search-bar.hidden { display: none; }
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  width: 200px;
+  padding: 4px 0;
+  direction: rtl;
+  outline: none;
+  box-shadow: none;
+}
+
+.search-bar input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  width: auto;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 99px;
+}
+
+.search-clear:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.search-hint {
+  font-size: 11px;
+  color: var(--accent-muted);
+  white-space: nowrap;
+  direction: rtl;
+  animation: fadeUp 0.2s ease;
+}
+
+.search-hint.hidden { display: none; }
+
+/* تمييز عقدة البحث */
+.node-highlight rect:not([filter]) {
+  filter: drop-shadow(0 0 10px rgba(200,169,110,0.8));
+}
