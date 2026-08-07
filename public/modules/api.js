@@ -14,7 +14,6 @@ export async function addPerson(name, parentId) {
   return res.json();
 }
 
-// إضافة عدة أبناء دفعة واحدة
 export async function addMultiplePeople(names, parentId) {
   const res = await fetch("/addMultiple", {
     method: "POST",
@@ -55,7 +54,6 @@ export async function deletePerson(id) {
   return res.json();
 }
 
-// تعيين المؤسس (المبرمج)
 export async function setFounder(id) {
   const res = await fetch("/setFounder", {
     method: "POST",
@@ -71,17 +69,46 @@ export function exportJson() {
 }
 
 export async function listBackups() {
-  const res = await fetch("/backups", { credentials: "same-origin" });
-  if (res.status === 401) return [];
-  return res.json();
+  return [];
 }
 
 export async function restoreBackup(filename) {
-  const res = await fetch("/restore", {
+  return { success: false, message: "الاستعادة عبر GitHub" };
+}
+
+// ==== إدارة المستخدمين ====
+export async function listUsers() {
+  const res = await fetch("/users", { credentials: "same-origin" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addUser(username, password) {
+  const res = await fetch("/users/add", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ filename })
+    body: JSON.stringify({ username, password })
+  });
+  return res.json();
+}
+
+export async function deleteUser(username) {
+  const res = await fetch("/users/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ username })
+  });
+  return res.json();
+}
+
+export async function resetUserPassword(username, password) {
+  const res = await fetch("/users/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ username, password })
   });
   return res.json();
 }
