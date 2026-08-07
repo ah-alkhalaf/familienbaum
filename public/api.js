@@ -69,7 +69,6 @@ export function exportJson() {
 }
 
 export async function listBackups() {
-  // Backups لم تعد مستخدمة (التخزين على GitHub) — تُعاد قائمة فارغة
   return [];
 }
 
