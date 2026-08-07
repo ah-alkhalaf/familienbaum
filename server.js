@@ -6,9 +6,10 @@ const fs = require("fs");
 const path = require("path");
 const session = require("express-session");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 
 const app = express();
-app.set("trust proxy", 1); // <- NEW
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -20,88 +21,20 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "none", // <- edit from "lax"
+    sameSite: "none",
     secure: true,
-    maxAge: 1000 * 60 * 60 // 1 Stunde
+    maxAge: 1000 * 60 * 60 * 8 // 8 Stunden
   }
 }));
 
 // ==== Pfade ====
 const FAMILY_PATH = path.join(__dirname, "family.json");
 const BACKUP_DIR = path.join(__dirname, "backups");
-// Liste der Backups
-app.get("/backups", requireAuth, (req, res) => {
-  if (!fs.existsSync(BACKUP_DIR)) return res.json([]);
-  const files = fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.startsWith("family.backup-") && f.endsWith(".json"))
-    .map(f => {
-      const stat = fs.statSync(path.join(BACKUP_DIR, f));
-      return { filename: f, mtime: stat.mtimeMs, size: stat.size };
-    })
-    .sort((a,b) => b.mtime - a.mtime);
-  res.json(files);
-});
 
-// Restore aus Backup
-app.post("/restore", requireAuth, (req, res) => {
-  const { filename } = req.body || {};
-  if (!filename || filename.includes("/") || filename.includes("\\")) {
-    return res.json({ success:false, message:"Ungültiger Dateiname." });
-  }
-  const backupPath = path.join(BACKUP_DIR, filename);
-  if (!fs.existsSync(backupPath)) {
-    return res.json({ success:false, message:"Backup nicht gefunden." });
-  }
-  const data = JSON.parse(fs.readFileSync(backupPath, "utf-8"));
-  fs.writeFileSync(FAMILY_PATH, JSON.stringify(data, null, 2), "utf-8");
-  res.json({ success:true });
-});
-
-// Export aktueller Stammbaum
-app.get("/export", requireAuth, (req, res) => {
-  const data = fs.readFileSync(FAMILY_PATH);
-  res.setHeader("Content-Disposition", "attachment; filename=family.json");
-  res.setHeader("Content-Type", "application/json");
-  res.send(data);
-});
-
-// ==== Hilfsfunktionen ====
-function walk(node, parent = null, fn) {
-  fn(node, parent);
-  (node.children || []).forEach(child => walk(child, node, fn));
-}
-
-function findById(root, id) {
-  let found = null;
-  walk(root, null, (node) => {
-    if (node._id === id) found = node;
-  });
-  return found;
-}
-
-function findParentOf(root, id) {
-  let parent = null;
-  walk(root, null, (node, p) => {
-    if (node._id === id) parent = p;
-  });
-  return parent;
-}
-
-function isDescendant(root, ancestorId, candidateId) {
-  const ancestor = findById(root, ancestorId);
-  if (!ancestor) return false;
-  let found = false;
-  walk(ancestor, null, (node) => {
-    if (node._id === candidateId) found = true;
-  });
-  return found;
-}
-
-async function loadFamily() {
+// ==== GitHub Helpers (generisch für أي ملف) ====
+function ghLoad(file) {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO;
-  const file = process.env.GITHUB_FILE;
-
   return new Promise((resolve, reject) => {
     const options = {
       hostname: "api.github.com",
@@ -113,36 +46,35 @@ async function loadFamily() {
         "Accept": "application/vnd.github+json"
       }
     };
-
     const req = https.request(options, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
       res.on("end", () => {
-        const json = JSON.parse(data);
-        const content = Buffer.from(json.content, "base64").toString("utf-8");
-        resolve({ data: JSON.parse(content), sha: json.sha });
+        try {
+          const json = JSON.parse(data);
+          if (json.content) {
+            const content = Buffer.from(json.content, "base64").toString("utf-8");
+            resolve({ data: JSON.parse(content), sha: json.sha });
+          } else {
+            // الملف غير موجود
+            resolve({ data: null, sha: null });
+          }
+        } catch (e) { reject(e); }
       });
     });
-
     req.on("error", reject);
     req.end();
   });
 }
 
-async function saveFamily(data, sha) {
+function ghSave(file, data, sha, message) {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO;
-  const file = process.env.GITHUB_FILE;
-
   const content = Buffer.from(JSON.stringify(data, null, 2)).toString("base64");
-
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      message: "Familienbaum aktualisiert",
-      content,
-      sha
-    });
-
+    const bodyObj = { message: message || "update", content };
+    if (sha) bodyObj.sha = sha;
+    const body = JSON.stringify(bodyObj);
     const options = {
       hostname: "api.github.com",
       path: `/repos/${repo}/contents/${file}`,
@@ -155,28 +87,74 @@ async function saveFamily(data, sha) {
         "Content-Length": Buffer.byteLength(body)
       }
     };
-
     const req = https.request(options, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
       res.on("end", () => resolve(JSON.parse(data)));
     });
-
     req.on("error", reject);
     req.write(body);
     req.end();
   });
 }
 
-function requireAuth(req, res, next) {
-  if (req.session && req.session.isAdmin === true) {
-    return next();
-  }
-  return res.status(401).json({ success: false, message: "Nicht autorisiert" });
+// ==== Family Load/Save ====
+async function loadFamily() {
+  const file = process.env.GITHUB_FILE || "family.json";
+  return ghLoad(file);
+}
+async function saveFamily(data, sha) {
+  const file = process.env.GITHUB_FILE || "family.json";
+  return ghSave(file, data, sha, "Familienbaum aktualisiert");
 }
 
-// ==== API-Routen ====
+// ==== Users Load/Save ====
+const USERS_FILE = "users.json";
+async function loadUsers() {
+  const result = await ghLoad(USERS_FILE);
+  if (!result.data) return { data: [], sha: null };
+  return result;
+}
+async function saveUsers(users, sha) {
+  return ghSave(USERS_FILE, users, sha, "Users aktualisiert");
+}
 
+// ==== Baum Hilfsfunktionen ====
+function walk(node, parent = null, fn) {
+  fn(node, parent);
+  (node.children || []).forEach(child => walk(child, node, fn));
+}
+function findById(root, id) {
+  let found = null;
+  walk(root, null, (node) => { if (node._id === id) found = node; });
+  return found;
+}
+function findParentOf(root, id) {
+  let parent = null;
+  walk(root, null, (node, p) => { if (node._id === id) parent = p; });
+  return parent;
+}
+function isDescendant(root, ancestorId, candidateId) {
+  const ancestor = findById(root, ancestorId);
+  if (!ancestor) return false;
+  let found = false;
+  walk(ancestor, null, (node) => { if (node._id === candidateId) found = true; });
+  return found;
+}
+
+// ==== Auth Middleware ====
+// أي مسؤول (رئيسي أو عادي)
+function requireAuth(req, res, next) {
+  if (req.session && req.session.isAdmin === true) return next();
+  return res.status(401).json({ success: false, message: "غير مصرّح" });
+}
+// المسؤول الرئيسي فقط
+function requireSuperAdmin(req, res, next) {
+  if (req.session && req.session.isAdmin === true && req.session.isSuper === true) return next();
+  return res.status(403).json({ success: false, message: "هذه العملية للمسؤول الرئيسي فقط" });
+}
+
+// ==== Family Routen ====
 app.get("/family", async (req, res) => {
   const { data } = await loadFamily();
   res.json(data);
@@ -186,9 +164,25 @@ app.post("/addPerson", requireAuth, async (req, res) => {
   const { name, parentId } = req.body;
   const { data, sha } = await loadFamily();
   const parent = parentId ? findById(data, parentId) : data;
-  if (!parent) return res.json({ success: false, message: "Vater nicht gefunden" });
-  const newPerson = { _id: crypto.randomUUID(), name, children: [] };
-  parent.children.push(newPerson);
+  if (!parent) return res.json({ success: false, message: "الأب غير موجود" });
+  if (!parent.children) parent.children = [];
+  parent.children.push({ _id: crypto.randomUUID(), name, children: [] });
+  await saveFamily(data, sha);
+  res.json({ success: true, data });
+});
+
+app.post("/addMultiple", requireAuth, async (req, res) => {
+  const { names, parentId } = req.body;
+  if (!Array.isArray(names) || names.length === 0) {
+    return res.json({ success: false, message: "لا توجد أسماء" });
+  }
+  const { data, sha } = await loadFamily();
+  const parent = parentId ? findById(data, parentId) : data;
+  if (!parent) return res.json({ success: false, message: "الأب غير موجود" });
+  if (!parent.children) parent.children = [];
+  names.forEach(name => {
+    if (name.trim()) parent.children.push({ _id: crypto.randomUUID(), name: name.trim(), children: [] });
+  });
   await saveFamily(data, sha);
   res.json({ success: true, data });
 });
@@ -197,7 +191,7 @@ app.post("/renamePerson", requireAuth, async (req, res) => {
   const { id, newName } = req.body;
   const { data, sha } = await loadFamily();
   const person = findById(data, id);
-  if (!person) return res.json({ success: false, message: "Person nicht gefunden" });
+  if (!person) return res.json({ success: false, message: "الشخص غير موجود" });
   person.name = newName;
   await saveFamily(data, sha);
   res.json({ success: true, data });
@@ -209,9 +203,10 @@ app.post("/movePerson", requireAuth, async (req, res) => {
   const person = findById(data, id);
   const oldParent = findParentOf(data, id);
   const newParent = findById(data, newParentId);
-  if (!person || !oldParent || !newParent) return res.json({ success: false, message: "Ungültige ID(s)" });
-  if (isDescendant(person, id, newParentId)) return res.json({ success: false, message: "Kann nicht zu Nachkomme verschoben werden" });
+  if (!person || !oldParent || !newParent) return res.json({ success: false, message: "معرّفات غير صالحة" });
+  if (isDescendant(person, id, newParentId)) return res.json({ success: false, message: "لا يمكن النقل إلى أحد الأبناء" });
   oldParent.children = oldParent.children.filter(c => c._id !== id);
+  if (!newParent.children) newParent.children = [];
   newParent.children.push(person);
   await saveFamily(data, sha);
   res.json({ success: true, data });
@@ -221,41 +216,131 @@ app.post("/deletePerson", requireAuth, async (req, res) => {
   const { id } = req.body;
   const { data, sha } = await loadFamily();
   const parent = findParentOf(data, id);
-  if (!parent) return res.json({ success: false, message: "Stammbaum kann nicht gelöscht werden" });
+  if (!parent) return res.json({ success: false, message: "لا يمكن حذف الجذر" });
   parent.children = parent.children.filter(c => c._id !== id);
   await saveFamily(data, sha);
   res.json({ success: true, data });
 });
 
+app.post("/setFounder", requireAuth, async (req, res) => {
+  const { id } = req.body;
+  const { data, sha } = await loadFamily();
+  function clearFounder(node) {
+    delete node.isFounder;
+    (node.children || []).forEach(clearFounder);
+  }
+  clearFounder(data);
+  const person = findById(data, id);
+  if (!person) return res.json({ success: false, message: "الشخص غير موجود" });
+  person.isFounder = true;
+  await saveFamily(data, sha);
+  res.json({ success: true, data });
+});
 
-// ==== Auth ====
-app.post("/login", (req, res) => {
+// ==== Export (من GitHub) ====
+app.get("/export", requireAuth, async (req, res) => {
+  const { data } = await loadFamily();
+  res.setHeader("Content-Disposition", "attachment; filename=family.json");
+  res.setHeader("Content-Type", "application/json");
+  res.send(JSON.stringify(data, null, 2));
+});
+
+// ==== Auth Routen ====
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-    // ← HIER die console.logs einfügen
-  console.log("ENV USER:", process.env.ADMIN_USER);
-  console.log("ENV PASS:", process.env.ADMIN_PASS);
-  console.log("REQ USER:", username);
-  console.log("REQ PASS:", password);
-  
-  if (
-    username === process.env.ADMIN_USER &&
-    password === process.env.ADMIN_PASS
-  ) {
+
+  // 1) المسؤول الرئيسي (من متغيرات Railway)
+  if (username === process.env.ADMIN_USER && password === process.env.ADMIN_PASS) {
     req.session.isAdmin = true;
-    return res.json({ success: true });
+    req.session.isSuper = true;
+    req.session.username = username;
+    return res.json({ success: true, isSuper: true, username });
   }
 
-  res.json({ success: false, message: "Ungültige Zugangsdaten" });
+  // 2) مسؤول عادي (من users.json)
+  try {
+    const { data: users } = await loadUsers();
+    const user = (users || []).find(u => u.username === username);
+    if (user && await bcrypt.compare(password, user.passwordHash)) {
+      req.session.isAdmin = true;
+      req.session.isSuper = false;
+      req.session.username = username;
+      return res.json({ success: true, isSuper: false, username });
+    }
+  } catch (e) {
+    console.error("Login-Fehler beim Laden der Users:", e.message);
+  }
+
+  res.json({ success: false, message: "بيانات الدخول غير صحيحة" });
 });
 
 app.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
+  req.session.destroy(() => res.json({ success: true }));
 });
 
 app.get("/me", (req, res) => {
-  res.json({ authenticated: !!req.session?.isAdmin });
+  res.json({
+    authenticated: !!req.session?.isAdmin,
+    isSuper: !!req.session?.isSuper,
+    username: req.session?.username || null
+  });
+});
+
+// ==== User-Management (nur Super-Admin) ====
+
+// قائمة المستخدمين (بدون كلمات المرور)
+app.get("/users", requireSuperAdmin, async (req, res) => {
+  const { data: users } = await loadUsers();
+  const safe = (users || []).map(u => ({ username: u.username, createdAt: u.createdAt || null }));
+  res.json(safe);
+});
+
+// إضافة مستخدم
+app.post("/users/add", requireSuperAdmin, async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.json({ success: false, message: "الاسم وكلمة المرور مطلوبان" });
+  if (username.length < 3) return res.json({ success: false, message: "اسم المستخدم قصير جداً (3 أحرف على الأقل)" });
+  if (password.length < 6) return res.json({ success: false, message: "كلمة المرور قصيرة جداً (6 أحرف على الأقل)" });
+  if (username === process.env.ADMIN_USER) return res.json({ success: false, message: "هذا الاسم محجوز" });
+
+  const { data: users, sha } = await loadUsers();
+  const list = users || [];
+  if (list.find(u => u.username === username)) {
+    return res.json({ success: false, message: "اسم المستخدم موجود مسبقاً" });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  list.push({ username, passwordHash, createdAt: new Date().toISOString() });
+  await saveUsers(list, sha);
+  res.json({ success: true });
+});
+
+// حذف مستخدم
+app.post("/users/delete", requireSuperAdmin, async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.json({ success: false, message: "الاسم مطلوب" });
+  const { data: users, sha } = await loadUsers();
+  const list = users || [];
+  const filtered = list.filter(u => u.username !== username);
+  if (filtered.length === list.length) {
+    return res.json({ success: false, message: "المستخدم غير موجود" });
+  }
+  await saveUsers(filtered, sha);
+  res.json({ success: true });
+});
+
+// تغيير كلمة مرور مستخدم
+app.post("/users/reset-password", requireSuperAdmin, async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.json({ success: false, message: "الاسم وكلمة المرور مطلوبان" });
+  if (password.length < 6) return res.json({ success: false, message: "كلمة المرور قصيرة جداً (6 أحرف على الأقل)" });
+  const { data: users, sha } = await loadUsers();
+  const list = users || [];
+  const user = list.find(u => u.username === username);
+  if (!user) return res.json({ success: false, message: "المستخدم غير موجود" });
+  user.passwordHash = await bcrypt.hash(password, 10);
+  await saveUsers(list, sha);
+  res.json({ success: true });
 });
 
 // ==== Server starten ====

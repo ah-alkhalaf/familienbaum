@@ -316,8 +316,10 @@ button.danger:hover {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  background-image:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(200,169,110,0.06) 0%, transparent 70%);
+  background-image: url('bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
   position: relative;
 }
@@ -327,8 +329,7 @@ button.danger:hover {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background: rgba(10, 12, 18, 0.55);
   pointer-events: none;
   z-index: 0;
 }
@@ -421,3 +422,173 @@ svg#svg {
 
 /* ===================== ADMIN TOGGLE WRAPPER ===================== */
 #adminToggleWrapper { display: flex; align-items: center; }
+
+/* ===================== GITHUB LINK ===================== */
+.github-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.github-link:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: rgba(200,169,110,0.3);
+}
+
+/* RTL fix für adminToggleWrapper */
+#adminToggleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* ===================== SEARCH ===================== */
+#searchWrapper {
+display: flex;
+align-items: center;
+gap: 8px;
+position: relative;
+}
+
+.search-icon-btn {
+  width: auto;
+  padding: 7px 12px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.search-icon-btn:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: rgba(200,169,110,0.3);
+  box-shadow: none;
+  transform: none;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+  border-radius: 99px;
+  padding: 4px 10px 4px 14px;
+  animation: fadeUp 0.18s ease;
+}
+
+.search-bar.hidden { display: none; }
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  width: 200px;
+  padding: 4px 0;
+  direction: rtl;
+  outline: none;
+  box-shadow: none;
+}
+
+.search-bar input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  width: auto;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 99px;
+}
+
+.search-clear:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.search-hint {
+  font-size: 11px;
+  color: var(--accent-muted);
+  white-space: nowrap;
+  direction: rtl;
+  animation: fadeUp 0.2s ease;
+}
+
+.search-hint.hidden { display: none; }
+
+/* تمييز عقدة البحث */
+.node-highlight rect:not([filter]) {
+  filter: drop-shadow(0 0 10px rgba(200,169,110,0.8));
+}
+
+/* ===================== USERS ===================== */
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.user-name {
+  font-size: 13px;
+  color: var(--text);
+  direction: rtl;
+}
+
+.user-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.user-reset,
+.user-delete {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.user-reset:hover {
+  background: var(--accent-glow);
+  border-color: rgba(200,169,110,0.3);
+  box-shadow: none;
+  transform: none;
+}
+
+.user-delete:hover {
+  background: var(--danger-bg);
+  border-color: rgba(224,82,82,0.2);
+  box-shadow: none;
+  transform: none;
+}

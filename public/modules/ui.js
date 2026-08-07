@@ -1,17 +1,14 @@
 // ui.js
 export function togglePanelHotkey(panel, app) {
-  // Start: Panel ist garantiert versteckt
   panel.classList.add("hidden");
   app.classList.remove("with-panel");
 
-  // Nur öffnen, wenn exakt ?admin=1
   const p = new URLSearchParams(location.search);
   if (p.get("admin") === "1") {
     panel.classList.remove("hidden");
     app.classList.add("with-panel");
   }
 
-  // Alt + A toggelt sichtbar/unsichtbar
   window.addEventListener("keydown", (e) => {
     if (e.altKey && (e.key === "a" || e.key === "A")) {
       const nowHidden = panel.classList.toggle("hidden");
@@ -35,17 +32,11 @@ export function initTabs() {
 export function populateAllDropdowns(data) {
   const items = [];
 
-  // Walk mit Vater-Name
   (function walk(n, parentName) {
-    items.push({
-      id: n._id,
-      name: n.name,
-      parentName: parentName || null
-    });
+    items.push({ id: n._id, name: n.name, parentName: parentName || null });
     (n.children || []).forEach(child => walk(child, n.name));
   })(data, null);
 
-  // Label: "Name  (Vater: XYZ)" — nur wenn Vater existiert
   const label = (item) => {
     if (item.parentName) return `${item.name}  (${item.parentName})`;
     return item.name;
@@ -63,9 +54,10 @@ export function populateAllDropdowns(data) {
     });
   };
 
-  fill("addParent");                           // inkl. Root → Top-Level möglich
+  fill("addParent");
   fill("renameTarget", n => n.id !== data._id);
   fill("moveTarget",   n => n.id !== data._id);
-  fill("moveParent");                          // inkl. Root
+  fill("moveParent");
   fill("deleteTarget", n => n.id !== data._id);
+  fill("founderTarget", n => n.id !== data._id); // المؤسس — بدون الجذر
 }

@@ -1,11 +1,16 @@
 // main.js (ES-Module)
 import { checkAuth, login, logout } from './modules/auth.js';
-import { loadFamily, addPerson, renamePerson, movePerson, deletePerson, exportJson, listBackups, restoreBackup } from './modules/api.js';
+import {
+  loadFamily, addPerson, addMultiplePeople, renamePerson, movePerson, deletePerson,
+  exportJson, setFounder,
+  listUsers, addUser, deleteUser, resetUserPassword
+} from './modules/api.js';
 import { populateAllDropdowns, initTabs, togglePanelHotkey } from './modules/ui.js';
 import { initTree, renderTree } from './modules/tree.js';
 
 let familyData = null;
 let loggedIn = false;
+let isSuper = false;
 
 const panel = document.getElementById("panel");
 const app = document.getElementById("app");
@@ -13,12 +18,73 @@ const app = document.getElementById("app");
 function updateAdminUI() {
   document.getElementById("login").style.display = loggedIn ? "none" : "block";
   document.getElementById("adminPanel").style.display = loggedIn ? "block" : "none";
+
+  // إظهار/إخفاء عناصر المسؤول الرئيسي
+  document.querySelectorAll(".super-only").forEach(el => {
+    el.style.display = (loggedIn && isSuper) ? "" : "none";
+  });
+
+  // تحديث التحية
+  const greeting = document.getElementById("adminGreeting");
+  if (greeting) {
+    greeting.textContent = isSuper ? "مرحباً، المسؤول الرئيسي 👑" : "مرحباً، المسؤول";
+  }
 }
 
 async function reloadTree() {
   familyData = await loadFamily();
   renderTree(familyData);
   populateAllDropdowns(familyData);
+}
+
+// عرض قائمة المستخدمين
+async function reloadUsers() {
+  if (!isSuper) return;
+  const listEl = document.getElementById("usersList");
+  if (!listEl) return;
+  const users = await listUsers();
+  listEl.innerHTML = "";
+
+  if (!users || users.length === 0) {
+    listEl.innerHTML = `<p class="hint">لا يوجد مستخدمون بعد.</p>`;
+    return;
+  }
+
+  users.forEach(u => {
+    const row = document.createElement("div");
+    row.className = "user-row";
+    row.innerHTML = `
+      <span class="user-name">👤 ${u.username}</span>
+      <div class="user-actions">
+        <button class="user-reset" data-user="${u.username}" title="تغيير كلمة المرور">🔑</button>
+        <button class="user-delete" data-user="${u.username}" title="حذف">🗑</button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  // ربط أزرار الحذف
+  listEl.querySelectorAll(".user-delete").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const username = btn.dataset.user;
+      if (!confirm(`حذف المستخدم "${username}"؟`)) return;
+      const result = await deleteUser(username);
+      if (result.success) { await reloadUsers(); }
+      else alert(result.message || "خطأ في الحذف");
+    });
+  });
+
+  // ربط أزرار تغيير كلمة المرور
+  listEl.querySelectorAll(".user-reset").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const username = btn.dataset.user;
+      const newPass = prompt(`كلمة المرور الجديدة للمستخدم "${username}" (6 أحرف على الأقل):`);
+      if (!newPass) return;
+      const result = await resetUserPassword(username, newPass);
+      if (result.success) alert("✅ تم تغيير كلمة المرور");
+      else alert(result.message || "خطأ");
+    });
+  });
 }
 
 function bindEvents() {
@@ -28,115 +94,109 @@ function bindEvents() {
     const result = await login(username, password);
     if (result.success) {
       loggedIn = true;
+      isSuper = !!result.isSuper;
       updateAdminUI();
       await reloadTree();
+      if (isSuper) await reloadUsers();
     } else {
-      alert(result.message || "Login fehlgeschlagen");
+      alert(result.message || "فشل تسجيل الدخول");
     }
   });
 
   document.getElementById("btnLogout").addEventListener("click", async () => {
     await logout();
     loggedIn = false;
+    isSuper = false;
     updateAdminUI();
   });
 
   document.getElementById("btnAdd").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
-    const name = document.getElementById("addName").value.trim();
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
+    const raw = document.getElementById("addName").value.trim();
     const parentId = document.getElementById("addParent").value || null;
-    if (!name) return alert("Name erforderlich.");
-    const result = await addPerson(name, parentId);
+    if (!raw) return alert("أدخل اسماً واحداً على الأقل.");
+    const names = raw.split(/[,،;]/).map(n => n.trim()).filter(n => n.length > 0);
+    let result;
+    if (names.length === 1) result = await addPerson(names[0], parentId);
+    else result = await addMultiplePeople(names, parentId);
     if (result.success) { await reloadTree(); document.getElementById("addName").value = ""; }
-    else alert(result.message || "Fehler beim Hinzufügen");
+    else alert(result.message || "خطأ في الإضافة");
   });
 
   document.getElementById("btnRename").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
     const id = document.getElementById("renameTarget").value;
     const newName = document.getElementById("renameNew").value.trim();
-    if (!id || !newName) return alert("Felder ausfüllen.");
+    if (!id || !newName) return alert("يرجى ملء جميع الحقول.");
     const result = await renamePerson(id, newName);
     if (result.success) { await reloadTree(); document.getElementById("renameNew").value = ""; }
-    else alert(result.message || "Fehler beim Umbenennen");
+    else alert(result.message || "خطأ في تغيير الاسم");
   });
 
   document.getElementById("btnMove").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
     const id = document.getElementById("moveTarget").value;
     const newParentId = document.getElementById("moveParent").value;
-    if (!id || !newParentId) return alert("Ungültige Auswahl.");
-    if (id === newParentId) return alert("Ein Mitglied kann nicht sein eigener Vater sein.");
+    if (!id || !newParentId) return alert("اختيار غير صالح.");
+    if (id === newParentId) return alert("لا يمكن أن يكون الشخص أباً لنفسه.");
     const result = await movePerson(id, newParentId);
-    if (result.success) await reloadTree(); else alert(result.message || "Fehler beim Verschieben");
+    if (result.success) await reloadTree();
+    else alert(result.message || "خطأ في النقل");
   });
 
   document.getElementById("btnDelete").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
     const id = document.getElementById("deleteTarget").value;
-    if (!id) return alert("Mitglied wählen.");
-    if (!confirm("Wirklich löschen? (inkl. Nachkommen)")) return;
+    if (!id) return alert("اختر شخصاً.");
+    if (!confirm("هل تريد الحذف؟ (سيُحذف مع جميع أبنائه)")) return;
     const result = await deletePerson(id);
-    if (result.success) { await reloadTree(); alert("✅ Person gelöscht"); }
-    else alert(result.message || "Fehler beim Löschen");
+    if (result.success) { await reloadTree(); }
+    else alert(result.message || "خطأ في الحذف");
   });
 
-  document.getElementById("btnExport").addEventListener("click", () => exportJson());
-  document.getElementById("btnRestore").addEventListener("click", async () => {
-    if (!loggedIn) return alert("Bitte einloggen.");
-    const sel = document.getElementById("restoreSelect");
-    const filename = sel.value;
-    if (!filename) return alert("Backup wählen.");
-    if (!confirm("Backup wirklich wiederherstellen?")) return;
-    const result = await restoreBackup(filename);
-    if (result.success) { await reloadTree(); alert("Wiederhergestellt."); }
-    else alert(result.message || "Restore fehlgeschlagen");
+  document.getElementById("btnSetFounder").addEventListener("click", async () => {
+    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
+    const id = document.getElementById("founderTarget").value;
+    if (!id) return alert("اختر شخصاً.");
+    const result = await setFounder(id);
+    if (result.success) { await reloadTree(); alert("✅ تم تعيين المؤسس"); }
+    else alert(result.message || "خطأ");
   });
 
-  document.getElementById("btnExport").addEventListener("click", async () => {
-  try {
-    await exportJson();
-  } catch (err) {
-    alert("Export fehlgeschlagen: " + err.message);
+  // إضافة مستخدم
+  const btnAddUser = document.getElementById("btnAddUser");
+  if (btnAddUser) {
+    btnAddUser.addEventListener("click", async () => {
+      if (!isSuper) return alert("هذه العملية للمسؤول الرئيسي فقط.");
+      const username = document.getElementById("newUserName").value.trim();
+      const password = document.getElementById("newUserPass").value.trim();
+      if (!username || !password) return alert("املأ الاسم وكلمة المرور.");
+      const result = await addUser(username, password);
+      if (result.success) {
+        document.getElementById("newUserName").value = "";
+        document.getElementById("newUserPass").value = "";
+        await reloadUsers();
+        alert("✅ تم إضافة المستخدم");
+      } else {
+        alert(result.message || "خطأ في الإضافة");
+      }
+    });
   }
-});
-
-document.getElementById("btnRestore").addEventListener("click", async () => {
-  const filename = document.getElementById("restoreSelect").value;
-  if (!filename) return alert("Kein Backup ausgewählt.");
-  if (!confirm(`Backup ${filename} wiederherstellen?`)) return;
-  const result = await restoreBackup(filename);
-  if (result.success) {
-    alert("Backup erfolgreich wiederhergestellt!");
-    await reloadTree();
-  } else {
-    alert(result.message || "Fehler beim Wiederherstellen.");
-  }
-});
 }
 
 async function init() {
-  // Panel per Tastatur & ?admin=1
   togglePanelHotkey(panel, app);
   initTabs();
 
-  loggedIn = await checkAuth();
+  const auth = await checkAuth();
+  loggedIn = !!auth.authenticated;
+  isSuper = !!auth.isSuper;
   updateAdminUI();
 
   initTree("#svg");
   await reloadTree();
 
-  const backups = await listBackups().catch(()=>[]);
-  const sel = document.getElementById("restoreSelect");
-  if (sel && backups?.forEach) {
-    sel.innerHTML = "";
-    backups.forEach(b => {
-      const opt = document.createElement("option");
-      opt.value = b.filename;
-      opt.textContent = `${b.filename} (${Math.round(b.size/1024)} KB)`;
-      sel.appendChild(opt);
-    });
-  }
+  if (loggedIn && isSuper) await reloadUsers();
 
   bindEvents();
 }

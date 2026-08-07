@@ -1,0 +1,46 @@
+{
+  "_id": "root",
+  "name": "علي",
+  "children": [
+    {
+      "_id": "b1",
+      "name": "جاسم"
+    },
+    {
+      "_id": "c1",
+      "name": "خشات",
+      "children": [
+        {
+          "_id": "aca5c786-a264-4604-b0d5-1afbbba435a7",
+          "name": "مضحي",
+          "children": []
+        },
+        {
+          "_id": "082f016e-d070-4efa-b332-0b8d4aac75b6",
+          "name": "مسند",
+          "children": [
+            {
+              "_id": "9d84dcf4-4a1b-4533-ae74-884d5577e0c7",
+              "name": "A",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "a1",
+      "name": "شفيع"
+    },
+    {
+      "_id": "bae49150-005e-4e6d-bee9-683d8d8e789b",
+      "name": "عجلان",
+      "children": []
+    },
+    {
+      "_id": "175cc3ec-8561-4bcc-9ca1-cf88c0b8c17e",
+      "name": "هويشان",
+      "children": []
+    }
+  ]
+}
