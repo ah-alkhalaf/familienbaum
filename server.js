@@ -343,6 +343,11 @@ app.post("/users/reset-password", requireSuperAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
+// مسار فحص الصحة لـ Railway
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
 // ==== Server starten ====
 app.listen(PORT, () => {
   console.log(`✅ Server läuft auf http://localhost:${PORT}`);
