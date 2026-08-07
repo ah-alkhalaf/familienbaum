@@ -22,15 +22,23 @@ export function initTree(selector) {
   feMerge2.append("feMergeNode").attr("in", "coloredBlur");
   feMerge2.append("feMergeNode").attr("in", "SourceGraphic");
 
+  // تدرّج ذهبي ملكي للجذر
+  const gradRoot = defs.append("linearGradient")
+    .attr("id", "grad-root")
+    .attr("x1", "0%").attr("y1", "0%")
+    .attr("x2", "0%").attr("y2", "100%");
+  gradRoot.append("stop").attr("offset", "0%").attr("stop-color", "#e6c876");
+  gradRoot.append("stop").attr("offset", "100%").attr("stop-color", "#c9a54e");
+
   tooltip = d3.select("body").append("div")
     .attr("id", "tree-tooltip")
     .style("position", "fixed")
     .style("background", "rgba(15,17,23,0.95)")
-    .style("border", "1px solid #c8a96e")
+    .style("border", "1px solid #c9a54e")
     .style("border-radius", "10px")
     .style("padding", "10px 14px")
-    .style("color", "#c8a96e")
-    .style("font-family", "'DM Sans', system-ui, sans-serif")
+    .style("color", "#c9a54e")
+    .style("font-family", "'Amiri', serif")
     .style("font-size", "13px")
     .style("pointer-events", "none")
     .style("opacity", "0")
@@ -45,37 +53,38 @@ export function initTree(selector) {
   _initSearch();
 }
 
+// لوحة ملكية — ياقوت أزرق × ذهب × جواهر فاخرة (تتناوب بتناغم)
 const palette = [
-  { fill: "#c8a96e", stroke: "#e8d48e", text: "#0f1117" },
-  { fill: "#1a3a2a", stroke: "#4caf80", text: "#7dd4a8" },
-  { fill: "#1a2a3a", stroke: "#4a8fc8", text: "#88c0e8" },
-  { fill: "#2a1a3a", stroke: "#9b6ec8", text: "#c0a0e8" },
-  { fill: "#3a2a1a", stroke: "#c8896e", text: "#e8b898" },
-  { fill: "#1a3a3a", stroke: "#4ac8c0", text: "#88e0d8" },
-  { fill: "#3a1a2a", stroke: "#c84a8f", text: "#e888c0" },
-  { fill: "#2a3a1a", stroke: "#8fc84a", text: "#c0e088" },
-  { fill: "#3a1a1a", stroke: "#c84a4a", text: "#e88888" },
-  { fill: "#1a1a3a", stroke: "#4a4ac8", text: "#8888e8" },
-  { fill: "#2a3a2e", stroke: "#5ac890", text: "#90e0b8" },
-  { fill: "#3a2e1a", stroke: "#c8a04a", text: "#e8c888" },
-  { fill: "#1e2a3a", stroke: "#4a70c8", text: "#88a8e8" },
-  { fill: "#2e1a3a", stroke: "#804ac8", text: "#b888e8" },
-  { fill: "#1a2e2a", stroke: "#4ab8a0", text: "#88d8c8" },
-  { fill: "#3a2a2e", stroke: "#c86890", text: "#e8a0c0" },
-  { fill: "#2e3a1a", stroke: "#90b84a", text: "#c0d888" },
-  { fill: "#3a1e2a", stroke: "#c84a70", text: "#e888a8" },
-  { fill: "#1a3a2e", stroke: "#4ac8a0", text: "#88e0c0" },
-  { fill: "#2a1e3a", stroke: "#704ac8", text: "#a888e8" },
-  { fill: "#3a2e2a", stroke: "#c89070", text: "#e8c0a0" },
-  { fill: "#1a2e3a", stroke: "#4a90b8", text: "#88c8e0" },
-  { fill: "#2e2a1a", stroke: "#b8904a", text: "#d8c080" },
-  { fill: "#1e3a2a", stroke: "#5ab870", text: "#90d8a0" },
-  { fill: "#3a1a2e", stroke: "#c84a90", text: "#e888c8" },
-  { fill: "#2a3a3a", stroke: "#4ac8c8", text: "#88e0e0" },
-  { fill: "#3a3a1a", stroke: "#c8c84a", text: "#e8e088" },
-  { fill: "#1a3a1e", stroke: "#4ac858", text: "#88e098" },
-  { fill: "#2e1a1a", stroke: "#c85a4a", text: "#e89888" },
-  { fill: "#1a1e3a", stroke: "#4a58c8", text: "#8898e8" },
+  { fill: "url(#grad-root)", stroke: "#e6c876", text: "#1a1206" },          // 0 — الجذر ذهبي (يُعالج خاصة)
+  { fill: "#152449", stroke: "#c9a54e", text: "#e8d9a8" },  // 1 — ياقوت أزرق × ذهب
+  { fill: "#1e2a52", stroke: "#5a7fc8", text: "#a8c0e8" },  // 2 — أزرق ملكي
+  { fill: "#241f4a", stroke: "#9678c0", text: "#c8b0e0" },  // 3 — بنفسجي ملكي
+  { fill: "#2a2140", stroke: "#c98fb0", text: "#e8c0d0" },  // 4 — وردي عتيق
+  { fill: "#142a44", stroke: "#4a9fc0", text: "#a0d0e0" },  // 5 — فيروزي عميق
+  { fill: "#26233e", stroke: "#b09668", text: "#e0cca8" },  // 6 — ذهبي مدخّن
+  { fill: "#1a2748", stroke: "#7088c8", text: "#b0c4e8" },  // 7 — أزرق سماوي
+  { fill: "#282038", stroke: "#a878b0", text: "#d8b8e0" },  // 8 — أرجواني
+  { fill: "#182644", stroke: "#c9a54e", text: "#e8d9a8" },  // 9 — أزرق × ذهب
+  { fill: "#202a4e", stroke: "#5a7fc8", text: "#a8c0e8" },  // 10
+  { fill: "#251f44", stroke: "#9678c0", text: "#c8b0e0" },  // 11
+  { fill: "#2c2142", stroke: "#c98fb0", text: "#e8c0d0" },  // 12
+  { fill: "#152a46", stroke: "#4a9fc0", text: "#a0d0e0" },  // 13
+  { fill: "#282540", stroke: "#b09668", text: "#e0cca8" },  // 14
+  { fill: "#1c2a4c", stroke: "#7088c8", text: "#b0c4e8" },  // 15
+  { fill: "#2a223c", stroke: "#a878b0", text: "#d8b8e0" },  // 16
+  { fill: "#1a2846", stroke: "#c9a54e", text: "#e8d9a8" },  // 17
+  { fill: "#222c50", stroke: "#5a7fc8", text: "#a8c0e8" },  // 18
+  { fill: "#271f46", stroke: "#9678c0", text: "#c8b0e0" },  // 19
+  { fill: "#2e2344", stroke: "#c98fb0", text: "#e8c0d0" },  // 20
+  { fill: "#172c48", stroke: "#4a9fc0", text: "#a0d0e0" },  // 21
+  { fill: "#2a2742", stroke: "#b09668", text: "#e0cca8" },  // 22
+  { fill: "#1e2c4e", stroke: "#7088c8", text: "#b0c4e8" },  // 23
+  { fill: "#2c243e", stroke: "#a878b0", text: "#d8b8e0" },  // 24
+  { fill: "#1c2a48", stroke: "#c9a54e", text: "#e8d9a8" },  // 25
+  { fill: "#242e52", stroke: "#5a7fc8", text: "#a8c0e8" },  // 26
+  { fill: "#292148", stroke: "#9678c0", text: "#c8b0e0" },  // 27
+  { fill: "#302546", stroke: "#c98fb0", text: "#e8c0d0" },  // 28
+  { fill: "#192e4a", stroke: "#4a9fc0", text: "#a0d0e0" },  // 29
 ];
 
 const getP = (depth) => palette[depth % palette.length];
@@ -83,7 +92,7 @@ const getP = (depth) => palette[depth % palette.length];
 let rootData = null;
 let initialized = false;
 let searchTerm = "";
-let hasFitted = false;      // هل تم توسيط الشجرة مرة واحدة عند التحميل
+let hasFitted = false;
 
 function collapseFromDepth(node, maxDepth, currentDepth = 0) {
   if (currentDepth >= maxDepth && node.children && node.children.length > 0) {
@@ -216,13 +225,12 @@ function _render(data) {
   const treeLayout = d3.tree().size([treeWidth, treeHeight]);
   treeLayout(root);
 
-  // خطوط منحنية ناعمة (مثل الأغصان) بلون كل جيل — تتصل بحواف المربعات
-  const NODE_HALF = 20; // نصف ارتفاع المربع
+  // خطوط منحنية ملكية — تتصل بحواف المربعات بلون كل جيل
+  const NODE_HALF = 20;
   const linkPath = (d) => {
-    const sx = d.source.x, sy = d.source.y + NODE_HALF;      // أسفل الأب
-    const tx = d.target.x, ty = d.target.y - NODE_HALF;      // أعلى الابن
-    const my = (sy + ty) / 2;                                 // نقطة المنتصف
-    // منحنى Bézier ناعم: ينزل من الأب، ينحني، يصل للابن
+    const sx = d.source.x, sy = d.source.y + NODE_HALF;
+    const tx = d.target.x, ty = d.target.y - NODE_HALF;
+    const my = (sy + ty) / 2;
     return `M${sx},${sy} C${sx},${my} ${tx},${my} ${tx},${ty}`;
   };
 
@@ -232,10 +240,10 @@ function _render(data) {
     .attr("class", "link")
     .attr("d", linkPath)
     .attr("fill", "none")
-    .attr("stroke", d => getP(d.target.depth).stroke)  // لون الابن (الجيل الأدنى)
-    .attr("stroke-width", 2)
+    .attr("stroke", d => getP(d.target.depth).stroke)
+    .attr("stroke-width", 1.5)
     .attr("stroke-linecap", "round")
-    .attr("opacity", 0.55);
+    .attr("opacity", 0.5);
 
   const node = content.selectAll(".node")
     .data(root.descendants())
@@ -283,11 +291,11 @@ function _render(data) {
     g.append("rect")
       .attr("x", -60).attr("y", -22).attr("width", 120).attr("height", 44)
       .attr("rx", 22).attr("ry", 22)
-      .attr("fill", "#c8a96e").attr("stroke", "#e8d48e").attr("stroke-width", 2.5);
+      .attr("fill", "url(#grad-root)").attr("stroke", "#e6c876").attr("stroke-width", 2.5);
     g.append("text").attr("dy", 6).attr("text-anchor", "middle")
-      .attr("font-family", "'DM Sans', system-ui, sans-serif")
-      .attr("font-size", "15px").attr("font-weight", "700")
-      .attr("fill", "#0f1117").text(d.data.name);
+      .attr("font-family", "'Amiri', serif")
+      .attr("font-size", "17px").attr("font-weight", "700")
+      .attr("fill", "#1a1206").text(d.data.name);
     _addCollapseIndicator(g, d);
   });
 
@@ -311,17 +319,17 @@ function _render(data) {
     g.append("rect")
       .attr("x", -66).attr("y", -26).attr("width", 132).attr("height", 52)
       .attr("rx", 26).attr("ry", 26)
-      .attr("fill", "none").attr("stroke", "#c8a96e")
+      .attr("fill", "none").attr("stroke", "#c9a54e")
       .attr("stroke-width", 2.5).attr("stroke-dasharray", "5,3");
     g.append("rect")
       .attr("x", -60).attr("y", -20).attr("width", 120).attr("height", 40)
       .attr("rx", 18).attr("ry", 18)
-      .attr("fill", p.fill).attr("stroke", "#c8a96e").attr("stroke-width", 2.5);
+      .attr("fill", p.fill).attr("stroke", "#c9a54e").attr("stroke-width", 2.5);
     g.append("text").attr("x", -40).attr("dy", 6)
       .attr("text-anchor", "middle").attr("font-size", "13px").text("💻");
     g.append("text").attr("x", 12).attr("dy", 6).attr("text-anchor", "middle")
-      .attr("font-family", "'DM Sans', system-ui, sans-serif")
-      .attr("font-size", "13px").attr("font-weight", "700")
+      .attr("font-family", "'Amiri', serif")
+      .attr("font-size", "15px").attr("font-weight", "700")
       .attr("fill", p.text).text(d.data.name);
     _addCollapseIndicator(g, d);
   });
@@ -344,23 +352,23 @@ function _render(data) {
       g.append("rect")
         .attr("x", -63).attr("y", -23).attr("width", 126).attr("height", 46)
         .attr("rx", 21).attr("ry", 21)
-        .attr("fill", "none").attr("stroke", "#c8a96e")
+        .attr("fill", "none").attr("stroke", "#c9a54e")
         .attr("stroke-width", 1).attr("stroke-dasharray", "3,3").attr("opacity", 0.5);
     }
     g.append("rect")
       .attr("x", -60).attr("y", -20).attr("width", 120).attr("height", 40)
       .attr("rx", 18).attr("ry", 18)
       .attr("fill", p.fill)
-      .attr("stroke", match ? "#ffffff" : hiddenFounder ? "#c8a96e" : p.stroke)
+      .attr("stroke", match ? "#ffffff" : hiddenFounder ? "#c9a54e" : p.stroke)
       .attr("stroke-width", match ? 2.5 : hiddenFounder ? 2 : 1.5);
     g.append("text").attr("dy", 6).attr("text-anchor", "middle")
-      .attr("font-family", "'DM Sans', system-ui, sans-serif")
-      .attr("font-size", "13px").attr("font-weight", "600")
+      .attr("font-family", "'Amiri', serif")
+      .attr("font-size", "15px").attr("font-weight", "600")
       .attr("fill", p.text).text(d.data.name);
     _addCollapseIndicator(g, d);
   });
 
-  // Auto-Fit — مرة واحدة فقط عند أول تحميل (لا يعود للمنتصف عند فتح/طي فرع)
+  // Auto-Fit — مرة واحدة فقط عند أول تحميل
   if (!hasFitted && !searchTerm) {
     const b = content.node().getBBox();
     if (b.width && b.height) {
@@ -375,7 +383,6 @@ function _render(data) {
   }
 }
 
-// زر إعادة التوسيط (يُستدعى من الخارج عند الحاجة)
 export function refit() {
   hasFitted = false;
   if (rootData) _render(rootData);
@@ -387,11 +394,11 @@ function _addCollapseIndicator(g, d) {
   const collapsed = d.data._collapsed;
   g.append("circle")
     .attr("cx", 0).attr("cy", 26).attr("r", 10)
-    .attr("fill", collapsed ? "#c8a96e" : "rgba(255,255,255,0.08)")
-    .attr("stroke", "#c8a96e").attr("stroke-width", 1.5);
+    .attr("fill", collapsed ? "#c9a54e" : "rgba(255,255,255,0.08)")
+    .attr("stroke", "#c9a54e").attr("stroke-width", 1.5);
   g.append("text")
     .attr("x", 0).attr("y", 30).attr("text-anchor", "middle")
     .attr("font-size", collapsed ? "9px" : "10px").attr("font-weight", "700")
-    .attr("fill", collapsed ? "#0f1117" : "#c8a96e")
+    .attr("fill", collapsed ? "#1a1206" : "#c9a54e")
     .text(collapsed ? count : "−");
 }
