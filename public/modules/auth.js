@@ -3,8 +3,10 @@ export async function checkAuth() {
   try {
     const res = await fetch("/me", { credentials: "same-origin" });
     const data = await res.json();
-    return !!data.authenticated;
-  } catch { return false; }
+    return data; // { authenticated, isSuper, username }
+  } catch {
+    return { authenticated: false, isSuper: false, username: null };
+  }
 }
 
 export async function login(username, password) {

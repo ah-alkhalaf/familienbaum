@@ -42,7 +42,7 @@
       </div>
 
       <div id="adminPanel" style="display:none">
-        <div class="admin-greeting">مرحباً، المسؤول</div>
+        <div class="admin-greeting" id="adminGreeting">مرحباً، المسؤول</div>
 
         <div class="tabs">
           <button class="tab active" data-tab="add">
@@ -64,9 +64,10 @@
           <button class="tab" data-tab="founder">
             💻 المؤسس
           </button>
-          <button class="tab" data-tab="backup">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v1.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            نسخ احتياطي
+          <!-- تبويب المستخدمين — للمسؤول الرئيسي فقط -->
+          <button class="tab super-only" data-tab="users" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 12c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            المستخدمون
           </button>
         </div>
 
@@ -138,18 +139,27 @@
           </button>
         </div>
 
-        <!-- نسخ احتياطي -->
-        <div class="tab-content hidden" id="tab-backup">
-          <button id="btnExport" class="secondary">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v7M4 5.5l2.5 2.5L9 5.5M1.5 9.5v1.5a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V9.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            تصدير JSON
-          </button>
-          <hr class="sep" />
+        <!-- المستخدمون (المسؤول الرئيسي فقط) -->
+        <div class="tab-content hidden" id="tab-users">
+          <p class="hint" style="margin-bottom:6px;">إضافة مسؤولين جدد يمكنهم تعديل الشجرة (بدون صلاحية إدارة المستخدمين).</p>
+
           <div class="field">
-            <label>استعادة نسخة احتياطية</label>
-            <select id="restoreSelect"></select>
+            <label>اسم المستخدم الجديد</label>
+            <input id="newUserName" type="text" placeholder="مثال: cousin_admin" autocomplete="off" />
           </div>
-          <button id="btnRestore" class="secondary">استعادة</button>
+          <div class="field">
+            <label>كلمة المرور</label>
+            <input id="newUserPass" type="text" placeholder="6 أحرف على الأقل" autocomplete="off" />
+          </div>
+          <button id="btnAddUser">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            إضافة مستخدم
+          </button>
+
+          <hr class="sep" />
+
+          <label>المستخدمون الحاليون</label>
+          <div id="usersList" class="users-list"></div>
         </div>
 
         <button id="btnLogout" class="logout-btn">
