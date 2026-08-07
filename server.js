@@ -222,7 +222,7 @@ app.post("/deletePerson", requireAuth, async (req, res) => {
   res.json({ success: true, data });
 });
 
-app.post("/setFounder", requireAuth, async (req, res) => {
+app.post("/setFounder", requireSuperAdmin, async (req, res) => {
   const { id } = req.body;
   const { data, sha } = await loadFamily();
   function clearFounder(node) {

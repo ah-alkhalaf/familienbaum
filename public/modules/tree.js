@@ -83,6 +83,7 @@ const getP = (depth) => palette[depth % palette.length];
 let rootData = null;
 let initialized = false;
 let searchTerm = "";
+let hasFitted = false;      // هل تم توسيط الشجرة مرة واحدة عند التحميل
 
 function collapseFromDepth(node, maxDepth, currentDepth = 0) {
   if (currentDepth >= maxDepth && node.children && node.children.length > 0) {
@@ -215,15 +216,21 @@ function _render(data) {
   const treeLayout = d3.tree().size([treeWidth, treeHeight]);
   treeLayout(root);
 
+  // خطوط منحنية ناعمة (مثل الأغصان) بلون كل جيل
+  const linkGen = d3.linkVertical()
+    .x(d => d.x)
+    .y(d => d.y);
+
   content.selectAll(".link")
     .data(root.links())
     .join("path")
     .attr("class", "link")
-    .attr("d", d3.linkVertical().x(d => d.x).y(d => d.y))
+    .attr("d", linkGen)
     .attr("fill", "none")
-    .attr("stroke", d => getP(d.source.depth).stroke)
-    .attr("stroke-width", 1.5)
-    .attr("opacity", 0.75);
+    .attr("stroke", d => getP(d.target.depth).stroke)  // لون الابن (الجيل الأدنى)
+    .attr("stroke-width", 2)
+    .attr("stroke-linecap", "round")
+    .attr("opacity", 0.55);
 
   const node = content.selectAll(".node")
     .data(root.descendants())
@@ -348,8 +355,8 @@ function _render(data) {
     _addCollapseIndicator(g, d);
   });
 
-  // Auto-Fit (فقط إذا لا يوجد بحث)
-  if (!searchTerm) {
+  // Auto-Fit — مرة واحدة فقط عند أول تحميل (لا يعود للمنتصف عند فتح/طي فرع)
+  if (!hasFitted && !searchTerm) {
     const b = content.node().getBBox();
     if (b.width && b.height) {
       const W = svg.node().clientWidth, H = svg.node().clientHeight;
@@ -358,8 +365,15 @@ function _render(data) {
         .translate(W / 2 - scale * (b.x + b.width / 2), H / 2 - scale * (b.y + b.height / 2))
         .scale(scale);
       svg.transition().duration(300).call(zoom.transform, t);
+      hasFitted = true;
     }
   }
+}
+
+// زر إعادة التوسيط (يُستدعى من الخارج عند الحاجة)
+export function refit() {
+  hasFitted = false;
+  if (rootData) _render(rootData);
 }
 
 function _addCollapseIndicator(g, d) {
