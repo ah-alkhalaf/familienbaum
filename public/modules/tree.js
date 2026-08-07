@@ -216,16 +216,21 @@ function _render(data) {
   const treeLayout = d3.tree().size([treeWidth, treeHeight]);
   treeLayout(root);
 
-  // خطوط منحنية ناعمة (مثل الأغصان) بلون كل جيل
-  const linkGen = d3.linkVertical()
-    .x(d => d.x)
-    .y(d => d.y);
+  // خطوط منحنية ناعمة (مثل الأغصان) بلون كل جيل — تتصل بحواف المربعات
+  const NODE_HALF = 20; // نصف ارتفاع المربع
+  const linkPath = (d) => {
+    const sx = d.source.x, sy = d.source.y + NODE_HALF;      // أسفل الأب
+    const tx = d.target.x, ty = d.target.y - NODE_HALF;      // أعلى الابن
+    const my = (sy + ty) / 2;                                 // نقطة المنتصف
+    // منحنى Bézier ناعم: ينزل من الأب، ينحني، يصل للابن
+    return `M${sx},${sy} C${sx},${my} ${tx},${my} ${tx},${ty}`;
+  };
 
   content.selectAll(".link")
     .data(root.links())
     .join("path")
     .attr("class", "link")
-    .attr("d", linkGen)
+    .attr("d", linkPath)
     .attr("fill", "none")
     .attr("stroke", d => getP(d.target.depth).stroke)  // لون الابن (الجيل الأدنى)
     .attr("stroke-width", 2)
