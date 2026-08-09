@@ -371,6 +371,11 @@
                                           "_id": "8838769a-ee2f-4350-a3cf-5488d9f78e9b",
                                           "name": "وسام",
                                           "children": []
+                                        },
+                                        {
+                                          "_id": "e8c8ec60-0b1f-423c-810f-df98705ef4e2",
+                                          "name": "يمان",
+                                          "children": []
                                         }
                                       ],
                                       "isFounder": true
