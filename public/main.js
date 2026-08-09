@@ -149,6 +149,13 @@ function updateAdminUI() {
   const greeting = document.getElementById("adminGreeting");
   if (greeting) greeting.textContent = isSuper ? "مرحباً، المسؤول الرئيسي 👑" : "مرحباً، المسؤول";
 
+  // المستخدم العادي: لا تبويبات — يظهر له تلميح الأزرار
+  const noTabsHint = document.getElementById("noTabsHint");
+  const founderContent = document.getElementById("tab-founder");
+  if (noTabsHint) noTabsHint.style.display = (loggedIn && !isSuper) ? "flex" : "none";
+  // للمسؤول الرئيسي: أظهر محتوى المؤسس افتراضياً
+  if (founderContent && loggedIn && isSuper) founderContent.classList.remove("hidden");
+
   // تفعيل أزرار العقد حسب حالة الدخول
   setTreeActions(loggedIn, { onAdd: nodeAdd, onEdit: nodeEdit, onDelete: nodeDelete });
 }
@@ -235,49 +242,6 @@ function bindEvents() {
     loggedIn = false; isSuper = false;
     updateAdminUI();
     await reloadTree();
-  });
-
-  // تبويب الإضافة (القائمة الجانبية) — يبقى كخيار إضافي
-  document.getElementById("btnAdd").addEventListener("click", async () => {
-    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
-    const raw = document.getElementById("addName").value.trim();
-    const parentId = document.getElementById("addParent").value || null;
-    if (!raw) return alert("أدخل اسماً واحداً على الأقل.");
-    const names = raw.split(/[,،;]/).map(n => n.trim()).filter(Boolean);
-    const res = names.length === 1 ? await addPerson(names[0], parentId) : await addMultiplePeople(names, parentId);
-    if (res.success) { await reloadTree(); document.getElementById("addName").value = ""; }
-    else alert(res.message || "خطأ في الإضافة");
-  });
-
-  document.getElementById("btnRename").addEventListener("click", async () => {
-    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
-    const id = document.getElementById("renameTarget").value;
-    const newName = document.getElementById("renameNew").value.trim();
-    if (!id || !newName) return alert("يرجى ملء جميع الحقول.");
-    const res = await renamePerson(id, newName);
-    if (res.success) { await reloadTree(); document.getElementById("renameNew").value = ""; }
-    else alert(res.message || "خطأ");
-  });
-
-  document.getElementById("btnMove").addEventListener("click", async () => {
-    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
-    const id = document.getElementById("moveTarget").value;
-    const newParentId = document.getElementById("moveParent").value;
-    if (!id || !newParentId) return alert("اختيار غير صالح.");
-    if (id === newParentId) return alert("لا يمكن أن يكون الشخص أباً لنفسه.");
-    const res = await movePerson(id, newParentId);
-    if (res.success) await reloadTree();
-    else alert(res.message || "خطأ في النقل");
-  });
-
-  document.getElementById("btnDelete").addEventListener("click", async () => {
-    if (!loggedIn) return alert("الرجاء تسجيل الدخول.");
-    const id = document.getElementById("deleteTarget").value;
-    if (!id) return alert("اختر شخصاً.");
-    if (!confirm("هل تريد الحذف؟ (سيُحذف مع جميع أبنائه)")) return;
-    const res = await deletePerson(id);
-    if (res.success) await reloadTree();
-    else alert(res.message || "خطأ في الحذف");
   });
 
   document.getElementById("btnSetFounder").addEventListener("click", async () => {

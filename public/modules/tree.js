@@ -130,14 +130,13 @@ function expandPathTo(node, targetId) {
   return false;
 }
 
-// البحث عن عقدة بالاسم
-function findNode(node, query) {
-  if (node.name && node.name.includes(query)) return node;
+// البحث عن كل العقد المطابقة بالاسم
+function findAllNodes(node, query, results = []) {
+  if (node.name && node.name.includes(query)) results.push(node);
   for (const child of (node.children || [])) {
-    const found = findNode(child, query);
-    if (found) return found;
+    findAllNodes(child, query, results);
   }
-  return null;
+  return results;
 }
 
 function _initSearch() {
@@ -172,23 +171,29 @@ function _initSearch() {
       return;
     }
 
-    // ابحث عن العقدة
-    const found = findNode(rootData, searchTerm);
-    if (found) {
-      // افتح الفروع حتى الوصول إليها
-      expandPathTo(rootData, found._id);
+    // ابحث عن كل العقد المطابقة
+    const matches = findAllNodes(rootData, searchTerm);
+    if (matches.length > 0) {
+      // افتح الفروع حتى الوصول لكل عقدة مطابقة
+      matches.forEach(m => expandPathTo(rootData, m._id));
       _render(rootData);
 
-      // تمرير وتكبير نحوها
+      // ضبط العرض ليشمل كل النتائج
       setTimeout(() => {
-        const nodeEl = content.selectAll(".node").filter(d => d.data._id === found._id);
-        if (!nodeEl.empty()) {
-          const d = nodeEl.datum();
-          const W = svg.node().clientWidth;
-          const H = svg.node().clientHeight;
-          const scale = 1.4;
+        const matchIds = new Set(matches.map(m => m._id));
+        const nodeEls = content.selectAll(".node").filter(d => matchIds.has(d.data._id));
+        if (!nodeEls.empty()) {
+          const xs = [], ys = [];
+          nodeEls.each(d => { xs.push(d.x); ys.push(d.y); });
+          const minX = Math.min(...xs), maxX = Math.max(...xs);
+          const minY = Math.min(...ys), maxY = Math.max(...ys);
+          const W = svg.node().clientWidth, H = svg.node().clientHeight;
+          const boxW = (maxX - minX) + 240;   // هامش
+          const boxH = (maxY - minY) + 200;
+          const scale = Math.max(0.4, Math.min(1.6, 0.85 * Math.min(W / boxW, H / boxH)));
+          const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
           const t = d3.zoomIdentity
-            .translate(W / 2 - scale * d.x, H / 2 - scale * d.y)
+            .translate(W / 2 - scale * cx, H / 2 - scale * cy)
             .scale(scale);
           svg.transition().duration(500).call(zoom.transform, t);
         }
@@ -420,14 +425,20 @@ function _addActionButtons(g, d) {
   if (!canEdit) return;
 
   const isRoot = d.depth === 0;
-  // مجموعة الأزرار — مخفية افتراضياً، تظهر عند المرور على العقدة
+
+  // منطقة مرور غير مرئية تغطي العقدة + مكان الأزرار (تمنع الاختفاء السريع)
+  g.append("rect")
+    .attr("class", "hover-bridge")
+    .attr("x", -66).attr("y", -48).attr("width", 132).attr("height", 74)
+    .attr("fill", "transparent")
+    .style("pointer-events", "all");
+
   const bar = g.append("g")
     .attr("class", "node-actions")
-    .attr("transform", "translate(0,-34)")
+    .attr("transform", "translate(0,-32)")
     .style("opacity", 0)
     .style("pointer-events", "none");
 
-  // زر واحد: دائرة + رمز
   const mkBtn = (x, bg, symbol, title, handler) => {
     const b = bar.append("g")
       .attr("transform", `translate(${x},0)`)
@@ -438,34 +449,37 @@ function _addActionButtons(g, d) {
       });
     b.append("title").text(title);
     b.append("circle")
-      .attr("r", 11)
+      .attr("r", 12)
       .attr("fill", bg)
       .attr("stroke", "#0a1020")
       .attr("stroke-width", 1.5);
     b.append("text")
-      .attr("text-anchor", "middle").attr("dy", 3.5)
-      .attr("font-size", "12px").attr("font-weight", "700")
+      .attr("text-anchor", "middle").attr("dy", 4)
+      .attr("font-size", "13px").attr("font-weight", "700")
       .attr("fill", "#0a1020").attr("pointer-events", "none")
       .text(symbol);
     return b;
   };
 
-  // ➕ إضافة ابن (متاح للجميع بما فيهم الجذر)
   mkBtn(0, "#5aac7b", "+", "إضافة ابن", (data) => actions.onAdd && actions.onAdd(data));
-
-  // ✏️ و 🗑 لغير الجذر فقط (لا يُعاد تسمية الجذر أو حذفه)
   if (!isRoot) {
-    mkBtn(-26, "#e6c876", "✎", "تعديل الاسم", (data) => actions.onEdit && actions.onEdit(data));
-    mkBtn(26, "#d65a5a", "×", "حذف", (data) => actions.onDelete && actions.onDelete(data));
+    mkBtn(-28, "#e6c876", "✎", "تعديل الاسم", (data) => actions.onEdit && actions.onEdit(data));
+    mkBtn(28, "#d65a5a", "×", "حذف", (data) => actions.onDelete && actions.onDelete(data));
   }
 
-  // إظهار/إخفاء عند المرور على العقدة كاملة
-  g.on("mouseenter.actions", function () {
-    bar.transition().duration(120).style("opacity", 1);
+  // إظهار فوري + إخفاء متأخّر قليلاً (تجربة مريحة)
+  let hideTimer = null;
+  const show = () => {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    bar.interrupt().transition().duration(100).style("opacity", 1);
     bar.style("pointer-events", "all");
-  });
-  g.on("mouseleave.actions", function () {
-    bar.transition().duration(120).style("opacity", 0);
-    bar.style("pointer-events", "none");
-  });
+  };
+  const hide = () => {
+    hideTimer = setTimeout(() => {
+      bar.interrupt().transition().duration(150).style("opacity", 0);
+      bar.style("pointer-events", "none");
+    }, 350); // تأخير 350ms قبل الإخفاء
+  };
+  g.on("mouseenter.actions", show);
+  g.on("mouseleave.actions", hide);
 }
