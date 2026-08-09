@@ -94,6 +94,15 @@ let initialized = false;
 let searchTerm = "";
 let hasFitted = false;
 
+// حالة الصلاحية ودوال العمليات (يوفّرها main.js)
+let canEdit = false;
+let actions = { onAdd: null, onEdit: null, onDelete: null };
+
+export function setTreeActions(loggedIn, handlers) {
+  canEdit = !!loggedIn;
+  actions = handlers || actions;
+}
+
 function collapseFromDepth(node, maxDepth, currentDepth = 0) {
   if (currentDepth >= maxDepth && node.children && node.children.length > 0) {
     node._collapsed = true;
@@ -297,6 +306,7 @@ function _render(data) {
       .attr("font-size", "17px").attr("font-weight", "700")
       .attr("fill", "#1a1206").text(d.data.name);
     _addCollapseIndicator(g, d);
+    _addActionButtons(g, d);
   });
 
   // ---- المؤسس ----
@@ -332,6 +342,7 @@ function _render(data) {
       .attr("font-size", "15px").attr("font-weight", "700")
       .attr("fill", p.text).text(d.data.name);
     _addCollapseIndicator(g, d);
+    _addActionButtons(g, d);
   });
 
   // ---- بقية العقد ----
@@ -366,6 +377,7 @@ function _render(data) {
       .attr("font-size", "15px").attr("font-weight", "600")
       .attr("fill", p.text).text(d.data.name);
     _addCollapseIndicator(g, d);
+    _addActionButtons(g, d);
   });
 
   // Auto-Fit — مرة واحدة فقط عند أول تحميل
@@ -401,4 +413,59 @@ function _addCollapseIndicator(g, d) {
     .attr("font-size", collapsed ? "9px" : "10px").attr("font-weight", "700")
     .attr("fill", collapsed ? "#1a1206" : "#c9a54e")
     .text(collapsed ? count : "−");
+}
+
+// أزرار العمليات المباشرة على العقدة (تظهر عند المرور)
+function _addActionButtons(g, d) {
+  if (!canEdit) return;
+
+  const isRoot = d.depth === 0;
+  // مجموعة الأزرار — مخفية افتراضياً، تظهر عند المرور على العقدة
+  const bar = g.append("g")
+    .attr("class", "node-actions")
+    .attr("transform", "translate(0,-34)")
+    .style("opacity", 0)
+    .style("pointer-events", "none");
+
+  // زر واحد: دائرة + رمز
+  const mkBtn = (x, bg, symbol, title, handler) => {
+    const b = bar.append("g")
+      .attr("transform", `translate(${x},0)`)
+      .style("cursor", "pointer")
+      .on("click", (event) => {
+        event.stopPropagation();
+        handler(d.data);
+      });
+    b.append("title").text(title);
+    b.append("circle")
+      .attr("r", 11)
+      .attr("fill", bg)
+      .attr("stroke", "#0a1020")
+      .attr("stroke-width", 1.5);
+    b.append("text")
+      .attr("text-anchor", "middle").attr("dy", 3.5)
+      .attr("font-size", "12px").attr("font-weight", "700")
+      .attr("fill", "#0a1020").attr("pointer-events", "none")
+      .text(symbol);
+    return b;
+  };
+
+  // ➕ إضافة ابن (متاح للجميع بما فيهم الجذر)
+  mkBtn(0, "#5aac7b", "+", "إضافة ابن", (data) => actions.onAdd && actions.onAdd(data));
+
+  // ✏️ و 🗑 لغير الجذر فقط (لا يُعاد تسمية الجذر أو حذفه)
+  if (!isRoot) {
+    mkBtn(-26, "#e6c876", "✎", "تعديل الاسم", (data) => actions.onEdit && actions.onEdit(data));
+    mkBtn(26, "#d65a5a", "×", "حذف", (data) => actions.onDelete && actions.onDelete(data));
+  }
+
+  // إظهار/إخفاء عند المرور على العقدة كاملة
+  g.on("mouseenter.actions", function () {
+    bar.transition().duration(120).style("opacity", 1);
+    bar.style("pointer-events", "all");
+  });
+  g.on("mouseleave.actions", function () {
+    bar.transition().duration(120).style("opacity", 0);
+    bar.style("pointer-events", "none");
+  });
 }

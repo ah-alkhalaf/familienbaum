@@ -634,3 +634,131 @@ svg#svg {
   .stage-brand { font-size: 17px; }
   .stage-brand span { display: none; }
 }
+
+/* ===================== MODAL (نافذة منبثقة ملكية) ===================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 16, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFade 0.2s ease;
+}
+
+.modal-overlay.hidden { display: none; }
+
+@keyframes modalFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-box {
+  width: min(92vw, 400px);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow), 0 0 60px rgba(201,165,78,0.1);
+  overflow: hidden;
+  animation: modalRise 0.25s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes modalRise {
+  from { transform: translateY(20px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-arabic);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+
+.modal-close {
+  width: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+.modal-close:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-body .modal-text {
+  font-family: var(--font-arabic);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.modal-body .modal-highlight {
+  color: var(--gold-bright);
+  font-weight: 700;
+}
+
+.modal-body input {
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  direction: rtl;
+}
+
+.modal-body input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+.modal-body label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: -4px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-footer button { flex: 1; }
+
+/* زر التأكيد يتحول للأحمر في وضع الحذف */
+.modal-box.danger-mode #modalConfirm {
+  background: linear-gradient(135deg, #e06b6b, var(--danger));
+  color: #fff;
+}
+
+/* ===================== NODE ACTION BUTTONS ===================== */
+.node-actions { transition: opacity 0.12s ease; }
