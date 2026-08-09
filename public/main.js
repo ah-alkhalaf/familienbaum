@@ -154,8 +154,9 @@ function updateAdminUI() {
   const founderContent = document.getElementById("tab-founder");
   if (noTabsHint) noTabsHint.style.display = (loggedIn && !isSuper) ? "flex" : "none";
   // للمسؤول الرئيسي: أظهر محتوى المؤسس افتراضياً
-  if (founderContent && loggedIn && isSuper) founderContent.classList.remove("hidden");
-
+  if (founderContent) {
+  founderContent.classList.toggle("hidden", !(loggedIn && isSuper));
+}
   // تفعيل أزرار العقد حسب حالة الدخول
   setTreeActions(loggedIn, { onAdd: nodeAdd, onEdit: nodeEdit, onDelete: nodeDelete });
 }
