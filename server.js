@@ -7,12 +7,32 @@ const path = require("path");
 const session = require("express-session");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// ==== الأمان: رؤوس الحماية (Helmet) ====
+// نسمح بموارد D3 والخطوط والصور الخارجية التي يستخدمها الموقع
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://d3js.org"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
@@ -26,6 +46,27 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 8 // 8 Stunden
   }
 }));
+
+// ==== الأمان: تحديد معدّل محاولات الدخول (Rate Limiting) ====
+// 5 محاولات فاشلة كل 15 دقيقة من نفس المصدر
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,           // 15 دقيقة
+  max: 5,                              // 5 محاولات
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,        // المحاولات الناجحة لا تُحسب
+  message: { success: false, message: "محاولات كثيرة. حاول مجدداً بعد 15 دقيقة." },
+  keyGenerator: (req) => req.ip
+});
+
+// حدّ عام أخف لبقية المسارات الحساسة (اختياري، يمنع الإساءة)
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,                 // دقيقة
+  max: 40,                             // 40 عملية كتابة/دقيقة
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "عمليات كثيرة جداً. تمهّل قليلاً." }
+});
 
 // ==== Pfade ====
 const FAMILY_PATH = path.join(__dirname, "family.json");
@@ -56,7 +97,6 @@ function ghLoad(file) {
             const content = Buffer.from(json.content, "base64").toString("utf-8");
             resolve({ data: JSON.parse(content), sha: json.sha });
           } else {
-            // الملف غير موجود
             resolve({ data: null, sha: null });
           }
         } catch (e) { reject(e); }
@@ -119,6 +159,36 @@ async function saveUsers(users, sha) {
   return ghSave(USERS_FILE, users, sha, "Users aktualisiert");
 }
 
+// ==== الأمان: سجل العمليات (Audit Log) ====
+const AUDIT_FILE = "audit.json";
+
+async function loadAudit() {
+  const result = await ghLoad(AUDIT_FILE);
+  if (!result.data) return { data: [], sha: null };
+  return result;
+}
+
+// يسجّل عملية دون إيقاف الطلب في حال الفشل
+async function logAction(req, action, details = {}) {
+  try {
+    const { data: log, sha } = await loadAudit();
+    const list = Array.isArray(log) ? log : [];
+    list.push({
+      time: new Date().toISOString(),
+      user: req.session?.username || "غير معروف",
+      role: req.session?.isSuper ? "رئيسي" : (req.session?.isAdmin ? "عادي" : "زائر"),
+      action,
+      details,
+      ip: req.ip
+    });
+    // نحتفظ بآخر 1000 عملية فقط لمنع تضخّم الملف
+    const trimmed = list.slice(-1000);
+    await ghSave(AUDIT_FILE, trimmed, sha, `Audit: ${action}`);
+  } catch (e) {
+    console.error("تعذّر تسجيل العملية:", e.message);
+  }
+}
+
 // ==== Baum Hilfsfunktionen ====
 function walk(node, parent = null, fn) {
   fn(node, parent);
@@ -143,12 +213,10 @@ function isDescendant(root, ancestorId, candidateId) {
 }
 
 // ==== Auth Middleware ====
-// أي مسؤول (رئيسي أو عادي)
 function requireAuth(req, res, next) {
   if (req.session && req.session.isAdmin === true) return next();
   return res.status(401).json({ success: false, message: "غير مصرّح" });
 }
-// المسؤول الرئيسي فقط
 function requireSuperAdmin(req, res, next) {
   if (req.session && req.session.isAdmin === true && req.session.isSuper === true) return next();
   return res.status(403).json({ success: false, message: "هذه العملية للمسؤول الرئيسي فقط" });
@@ -160,7 +228,7 @@ app.get("/family", async (req, res) => {
   res.json(data);
 });
 
-app.post("/addPerson", requireAuth, async (req, res) => {
+app.post("/addPerson", requireAuth, writeLimiter, async (req, res) => {
   const { name, parentId } = req.body;
   const { data, sha } = await loadFamily();
   const parent = parentId ? findById(data, parentId) : data;
@@ -168,10 +236,11 @@ app.post("/addPerson", requireAuth, async (req, res) => {
   if (!parent.children) parent.children = [];
   parent.children.push({ _id: crypto.randomUUID(), name, children: [] });
   await saveFamily(data, sha);
+  logAction(req, "إضافة شخص", { name, parent: parent.name });
   res.json({ success: true, data });
 });
 
-app.post("/addMultiple", requireAuth, async (req, res) => {
+app.post("/addMultiple", requireAuth, writeLimiter, async (req, res) => {
   const { names, parentId } = req.body;
   if (!Array.isArray(names) || names.length === 0) {
     return res.json({ success: false, message: "لا توجد أسماء" });
@@ -180,24 +249,31 @@ app.post("/addMultiple", requireAuth, async (req, res) => {
   const parent = parentId ? findById(data, parentId) : data;
   if (!parent) return res.json({ success: false, message: "الأب غير موجود" });
   if (!parent.children) parent.children = [];
+  const added = [];
   names.forEach(name => {
-    if (name.trim()) parent.children.push({ _id: crypto.randomUUID(), name: name.trim(), children: [] });
+    if (name.trim()) {
+      parent.children.push({ _id: crypto.randomUUID(), name: name.trim(), children: [] });
+      added.push(name.trim());
+    }
   });
   await saveFamily(data, sha);
+  logAction(req, "إضافة عدة أشخاص", { names: added, parent: parent.name });
   res.json({ success: true, data });
 });
 
-app.post("/renamePerson", requireAuth, async (req, res) => {
+app.post("/renamePerson", requireAuth, writeLimiter, async (req, res) => {
   const { id, newName } = req.body;
   const { data, sha } = await loadFamily();
   const person = findById(data, id);
   if (!person) return res.json({ success: false, message: "الشخص غير موجود" });
+  const oldName = person.name;
   person.name = newName;
   await saveFamily(data, sha);
+  logAction(req, "تغيير اسم", { from: oldName, to: newName });
   res.json({ success: true, data });
 });
 
-app.post("/movePerson", requireAuth, async (req, res) => {
+app.post("/movePerson", requireAuth, writeLimiter, async (req, res) => {
   const { id, newParentId } = req.body;
   const { data, sha } = await loadFamily();
   const person = findById(data, id);
@@ -209,20 +285,24 @@ app.post("/movePerson", requireAuth, async (req, res) => {
   if (!newParent.children) newParent.children = [];
   newParent.children.push(person);
   await saveFamily(data, sha);
+  logAction(req, "نقل شخص", { name: person.name, to: newParent.name });
   res.json({ success: true, data });
 });
 
-app.post("/deletePerson", requireAuth, async (req, res) => {
+app.post("/deletePerson", requireAuth, writeLimiter, async (req, res) => {
   const { id } = req.body;
   const { data, sha } = await loadFamily();
+  const person = findById(data, id);
   const parent = findParentOf(data, id);
   if (!parent) return res.json({ success: false, message: "لا يمكن حذف الجذر" });
+  const deletedName = person ? person.name : "غير معروف";
   parent.children = parent.children.filter(c => c._id !== id);
   await saveFamily(data, sha);
+  logAction(req, "حذف شخص", { name: deletedName, parent: parent.name });
   res.json({ success: true, data });
 });
 
-app.post("/setFounder", requireSuperAdmin, async (req, res) => {
+app.post("/setFounder", requireSuperAdmin, writeLimiter, async (req, res) => {
   const { id } = req.body;
   const { data, sha } = await loadFamily();
   function clearFounder(node) {
@@ -234,6 +314,7 @@ app.post("/setFounder", requireSuperAdmin, async (req, res) => {
   if (!person) return res.json({ success: false, message: "الشخص غير موجود" });
   person.isFounder = true;
   await saveFamily(data, sha);
+  logAction(req, "تعيين مؤسس", { name: person.name });
   res.json({ success: true, data });
 });
 
@@ -246,7 +327,7 @@ app.get("/export", requireAuth, async (req, res) => {
 });
 
 // ==== Auth Routen ====
-app.post("/login", async (req, res) => {
+app.post("/login", loginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   // 1) المسؤول الرئيسي (من متغيرات Railway)
@@ -254,6 +335,7 @@ app.post("/login", async (req, res) => {
     req.session.isAdmin = true;
     req.session.isSuper = true;
     req.session.username = username;
+    logAction(req, "تسجيل دخول", { role: "رئيسي" });
     return res.json({ success: true, isSuper: true, username });
   }
 
@@ -265,12 +347,15 @@ app.post("/login", async (req, res) => {
       req.session.isAdmin = true;
       req.session.isSuper = false;
       req.session.username = username;
+      logAction(req, "تسجيل دخول", { role: "عادي" });
       return res.json({ success: true, isSuper: false, username });
     }
   } catch (e) {
     console.error("Login-Fehler beim Laden der Users:", e.message);
   }
 
+  // تسجيل محاولة فاشلة (دون كلمة المرور)
+  logAction(req, "محاولة دخول فاشلة", { username: username || "" });
   res.json({ success: false, message: "بيانات الدخول غير صحيحة" });
 });
 
@@ -287,16 +372,13 @@ app.get("/me", (req, res) => {
 });
 
 // ==== User-Management (nur Super-Admin) ====
-
-// قائمة المستخدمين (بدون كلمات المرور)
 app.get("/users", requireSuperAdmin, async (req, res) => {
   const { data: users } = await loadUsers();
   const safe = (users || []).map(u => ({ username: u.username, createdAt: u.createdAt || null }));
   res.json(safe);
 });
 
-// إضافة مستخدم
-app.post("/users/add", requireSuperAdmin, async (req, res) => {
+app.post("/users/add", requireSuperAdmin, writeLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.json({ success: false, message: "الاسم وكلمة المرور مطلوبان" });
   if (username.length < 3) return res.json({ success: false, message: "اسم المستخدم قصير جداً (3 أحرف على الأقل)" });
@@ -312,11 +394,11 @@ app.post("/users/add", requireSuperAdmin, async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
   list.push({ username, passwordHash, createdAt: new Date().toISOString() });
   await saveUsers(list, sha);
+  logAction(req, "إضافة مستخدم", { username });
   res.json({ success: true });
 });
 
-// حذف مستخدم
-app.post("/users/delete", requireSuperAdmin, async (req, res) => {
+app.post("/users/delete", requireSuperAdmin, writeLimiter, async (req, res) => {
   const { username } = req.body;
   if (!username) return res.json({ success: false, message: "الاسم مطلوب" });
   const { data: users, sha } = await loadUsers();
@@ -326,11 +408,11 @@ app.post("/users/delete", requireSuperAdmin, async (req, res) => {
     return res.json({ success: false, message: "المستخدم غير موجود" });
   }
   await saveUsers(filtered, sha);
+  logAction(req, "حذف مستخدم", { username });
   res.json({ success: true });
 });
 
-// تغيير كلمة مرور مستخدم
-app.post("/users/reset-password", requireSuperAdmin, async (req, res) => {
+app.post("/users/reset-password", requireSuperAdmin, writeLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.json({ success: false, message: "الاسم وكلمة المرور مطلوبان" });
   if (password.length < 6) return res.json({ success: false, message: "كلمة المرور قصيرة جداً (6 أحرف على الأقل)" });
@@ -340,7 +422,16 @@ app.post("/users/reset-password", requireSuperAdmin, async (req, res) => {
   if (!user) return res.json({ success: false, message: "المستخدم غير موجود" });
   user.passwordHash = await bcrypt.hash(password, 10);
   await saveUsers(list, sha);
+  logAction(req, "تغيير كلمة مرور مستخدم", { username });
   res.json({ success: true });
+});
+
+// ==== سجل العمليات (عرض — للمسؤول الرئيسي فقط) ====
+app.get("/audit", requireSuperAdmin, async (req, res) => {
+  const { data: log } = await loadAudit();
+  // أحدث 100 عملية، بترتيب عكسي (الأحدث أولاً)
+  const recent = (Array.isArray(log) ? log : []).slice(-100).reverse();
+  res.json(recent);
 });
 
 // مسار فحص الصحة لـ Railway
