@@ -53,6 +53,11 @@
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 12c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
             المستخدمون
           </button>
+          <!-- تبويب السجل — للمسؤول الرئيسي فقط -->
+          <button class="tab super-only" data-tab="audit" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 5.5h5M4.5 7.5h5M4.5 9.5h3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+            السجل
+          </button>
         </div>
 
         <!-- تلميح للمستخدم العادي (لا تبويبات له) -->
@@ -98,6 +103,15 @@
 
           <label>المستخدمون الحاليون</label>
           <div id="usersList" class="users-list"></div>
+        </div>
+
+        <!-- سجل العمليات (المسؤول الرئيسي فقط) -->
+        <div class="tab-content hidden" id="tab-audit">
+          <div class="audit-header">
+            <span class="hint">آخر 100 عملية على الشجرة</span>
+            <button id="btnRefreshAudit" class="secondary audit-refresh">↻ تحديث</button>
+          </div>
+          <div id="auditList" class="audit-list"></div>
         </div>
 
         <button id="btnLogout" class="logout-btn">

@@ -825,3 +825,131 @@ svg#svg {
   font-size: 14px;
   color: var(--text-dim);
 }
+
+/* ===================== AUDIT LOG (سجل العمليات) ===================== */
+.audit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.audit-refresh {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-gold) transparent;
+  padding-left: 2px;
+}
+
+.audit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s;
+}
+
+.audit-item:hover { border-color: var(--border-gold); }
+
+/* محاولات الدخول الفاشلة بلمسة حمراء */
+.audit-item.audit-failed {
+  border-color: rgba(214,90,90,0.3);
+  background: rgba(214,90,90,0.06);
+}
+
+.audit-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+}
+
+.audit-failed .audit-icon {
+  background: rgba(214,90,90,0.12);
+  border-color: rgba(214,90,90,0.25);
+}
+
+.audit-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audit-action {
+  font-family: var(--font-arabic);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.audit-details {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.audit-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+
+.audit-user {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.audit-role {
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.audit-role-super {
+  background: var(--gold-glow);
+  color: var(--gold-bright);
+  border: 1px solid var(--border-gold);
+}
+
+.audit-role-normal {
+  background: rgba(90,127,200,0.15);
+  color: #a8c0e8;
+  border: 1px solid rgba(90,127,200,0.3);
+}
+
+.audit-role-guest {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dim);
+  border: 1px solid var(--border-soft);
+}
+
+.audit-time {
+  color: var(--text-dim);
+  margin-right: auto;
+}

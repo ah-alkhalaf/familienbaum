@@ -112,3 +112,10 @@ export async function resetUserPassword(username, password) {
   });
   return res.json();
 }
+
+// ==== سجل العمليات ====
+export async function listAudit() {
+  const res = await fetch("/audit", { credentials: "same-origin" });
+  if (!res.ok) return [];
+  return res.json();
+}

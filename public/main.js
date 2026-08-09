@@ -3,7 +3,7 @@ import { checkAuth, login, logout } from './modules/auth.js';
 import {
   loadFamily, addPerson, addMultiplePeople, renamePerson, movePerson, deletePerson,
   exportJson, setFounder,
-  listUsers, addUser, deleteUser, resetUserPassword
+  listUsers, addUser, deleteUser, resetUserPassword, listAudit
 } from './modules/api.js';
 import { populateAllDropdowns, initTabs, togglePanelHotkey } from './modules/ui.js';
 import { initTree, renderTree, setTreeActions } from './modules/tree.js';
@@ -136,6 +136,82 @@ function nodeDelete(nodeData) {
 }
 
 /* ============================================================
+   عارض سجل العمليات
+   ============================================================ */
+const AUDIT_ICONS = {
+  "تسجيل دخول": "🔓",
+  "محاولة دخول فاشلة": "⛔",
+  "إضافة شخص": "➕",
+  "إضافة عدة أشخاص": "➕",
+  "حذف شخص": "🗑",
+  "تغيير اسم": "✎",
+  "نقل شخص": "↔",
+  "تعيين مؤسس": "💻",
+  "إضافة مستخدم": "👤",
+  "حذف مستخدم": "🚫",
+  "تغيير كلمة مرور مستخدم": "🔑"
+};
+
+function fmtAuditTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("ar-EG", {
+      month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  } catch { return iso; }
+}
+
+function auditDetailsText(entry) {
+  const x = entry.details || {};
+  switch (entry.action) {
+    case "إضافة شخص":        return `${x.name || ""} ← ${x.parent || ""}`;
+    case "إضافة عدة أشخاص":   return `${(x.names || []).join("، ")} ← ${x.parent || ""}`;
+    case "حذف شخص":          return `${x.name || ""} (من ${x.parent || ""})`;
+    case "تغيير اسم":        return `${x.from || ""} ← ${x.to || ""}`;
+    case "نقل شخص":          return `${x.name || ""} ← ${x.to || ""}`;
+    case "تعيين مؤسس":       return x.name || "";
+    case "محاولة دخول فاشلة": return `المستخدم: ${x.username || "—"}`;
+    default:
+      if (x.username) return x.username;
+      if (x.role) return `صلاحية: ${x.role}`;
+      return "";
+  }
+}
+
+async function reloadAudit() {
+  if (!isSuper) return;
+  const listEl = document.getElementById("auditList");
+  if (!listEl) return;
+  listEl.innerHTML = `<p class="hint" style="text-align:center;padding:20px;">جارٍ التحميل…</p>`;
+  const log = await listAudit();
+  listEl.innerHTML = "";
+  if (!log || log.length === 0) {
+    listEl.innerHTML = `<p class="hint" style="text-align:center;padding:20px;">لا توجد عمليات بعد.</p>`;
+    return;
+  }
+  log.forEach(entry => {
+    const icon = AUDIT_ICONS[entry.action] || "•";
+    const failed = entry.action === "محاولة دخول فاشلة";
+    const details = auditDetailsText(entry);
+    const roleClass = entry.role === "رئيسي" ? "super" : (entry.role === "عادي" ? "normal" : "guest");
+    const row = document.createElement("div");
+    row.className = "audit-item" + (failed ? " audit-failed" : "");
+    row.innerHTML = `
+      <div class="audit-icon">${icon}</div>
+      <div class="audit-main">
+        <div class="audit-action">${entry.action}${details ? ` <span class="audit-details">${details}</span>` : ""}</div>
+        <div class="audit-meta">
+          <span class="audit-user">${entry.user}</span>
+          <span class="audit-role audit-role-${roleClass}">${entry.role}</span>
+          <span class="audit-time">${fmtAuditTime(entry.time)}</span>
+        </div>
+      </div>`;
+    listEl.appendChild(row);
+  });
+}
+
+/* ============================================================
    إدارة الواجهة
    ============================================================ */
 function updateAdminUI() {
@@ -153,10 +229,11 @@ function updateAdminUI() {
   const noTabsHint = document.getElementById("noTabsHint");
   const founderContent = document.getElementById("tab-founder");
   if (noTabsHint) noTabsHint.style.display = (loggedIn && !isSuper) ? "flex" : "none";
-  // للمسؤول الرئيسي: أظهر محتوى المؤسس افتراضياً
+  // محتوى المؤسس: للمسؤول الرئيسي فقط
   if (founderContent) {
-  founderContent.classList.toggle("hidden", !(loggedIn && isSuper));
-}
+    founderContent.classList.toggle("hidden", !(loggedIn && isSuper));
+  }
+
   // تفعيل أزرار العقد حسب حالة الدخول
   setTreeActions(loggedIn, { onAdd: nodeAdd, onEdit: nodeEdit, onDelete: nodeDelete });
 }
@@ -232,7 +309,7 @@ function bindEvents() {
       isSuper = !!result.isSuper;
       updateAdminUI();
       await reloadTree();
-      if (isSuper) await reloadUsers();
+      if (isSuper) { await reloadUsers(); await reloadAudit(); }
     } else {
       alert(result.message || "فشل تسجيل الدخول");
     }
@@ -270,6 +347,15 @@ function bindEvents() {
       } else alert(res.message || "خطأ في الإضافة");
     });
   }
+
+  // زر تحديث السجل
+  const btnRefreshAudit = document.getElementById("btnRefreshAudit");
+  if (btnRefreshAudit) btnRefreshAudit.addEventListener("click", reloadAudit);
+
+  // تحديث السجل عند فتح تبويبه
+  document.querySelectorAll('.tab[data-tab="audit"]').forEach(t =>
+    t.addEventListener("click", reloadAudit)
+  );
 }
 
 async function init() {
@@ -284,7 +370,7 @@ async function init() {
   updateAdminUI();      // يضبط أزرار الشجرة قبل أول رسم
   await reloadTree();
 
-  if (loggedIn && isSuper) await reloadUsers();
+  if (loggedIn && isSuper) { await reloadUsers(); await reloadAudit(); }
 
   bindEvents();
 }
