@@ -139,76 +139,149 @@ function findAllNodes(node, query, results = []) {
   return results;
 }
 
+// البحث عن المطابقين مع سلسلة النسب (الاسم + الأب + الجد ...)
+function findMatchesWithLineage(root, query) {
+  const results = [];
+  (function walk(node, ancestors) {
+    if (node.name && node.name.includes(query)) {
+      // ancestors مرتبة من الأقرب (الأب) للأبعد (الجد)
+      results.push({ node, ancestors: ancestors.slice() });
+    }
+    const nextAncestors = [node.name, ...ancestors];
+    (node.children || []).forEach(child => walk(child, nextAncestors));
+  })(root, []);
+  return results;
+}
+
+// بناء نص النسب: "احمد بن خلف بن شفاقه"
+function lineageText(name, ancestors) {
+  // نأخذ حتى جدّين للاختصار
+  const chain = [name, ...ancestors.slice(0, 2)];
+  return chain.join(" بن ");
+}
+
+// الانتقال إلى عقدة محددة وتمييزها
+function focusNode(target) {
+  // افتح المسار إليها
+  expandPathTo(rootData, target._id);
+  searchTerm = ""; // لا نميّز الكل — فقط ننتقل للمختار
+  _render(rootData);
+
+  setTimeout(() => {
+    const el = content.selectAll(".node").filter(d => d.data._id === target._id);
+    if (!el.empty()) {
+      const d = el.datum();
+      const W = svg.node().clientWidth, H = svg.node().clientHeight;
+      const scale = 1.5;
+      const t = d3.zoomIdentity
+        .translate(W / 2 - scale * d.x, H / 2 - scale * d.y)
+        .scale(scale);
+      svg.transition().duration(550).call(zoom.transform, t);
+
+      // وميض ذهبي مؤقت على العقدة المختارة
+      const box = el.select("rect");
+      const origStroke = box.attr("stroke");
+      const origWidth = box.attr("stroke-width");
+      el.append("rect")
+        .attr("class", "focus-flash")
+        .attr("x", -66).attr("y", -26).attr("width", 132).attr("height", 52)
+        .attr("rx", 24).attr("fill", "none")
+        .attr("stroke", "#ffffff").attr("stroke-width", 3)
+        .attr("filter", "url(#search-glow)")
+        .style("opacity", 1)
+        .transition().duration(1400)
+        .style("opacity", 0)
+        .remove();
+    }
+  }, 120);
+}
+
 function _initSearch() {
-  const btn    = document.getElementById("btnSearch");
-  const bar    = document.getElementById("searchBar");
-  const input  = document.getElementById("searchInput");
-  const clear  = document.getElementById("btnClearSearch");
-  const hint   = document.getElementById("searchHint");
+  const btn     = document.getElementById("btnSearch");
+  const bar     = document.getElementById("searchBar");
+  const input   = document.getElementById("searchInput");
+  const clear   = document.getElementById("btnClearSearch");
+  const hint    = document.getElementById("searchHint");
+  const results = document.getElementById("searchResults");
 
   if (!btn) return;
+
+  let activeIdx = -1;
+  let currentMatches = [];
+
+  const closeResults = () => {
+    results.classList.add("hidden");
+    results.innerHTML = "";
+    activeIdx = -1;
+    currentMatches = [];
+  };
+
+  const resetSearch = () => {
+    input.value = "";
+    searchTerm = "";
+    closeResults();
+    bar.classList.add("hidden");
+    hint.classList.add("hidden");
+    _render(rootData);
+  };
 
   btn.addEventListener("click", () => {
     bar.classList.toggle("hidden");
     hint.classList.toggle("hidden");
-    if (!bar.classList.contains("hidden")) {
-      input.focus();
-    }
+    if (!bar.classList.contains("hidden")) input.focus();
+    else closeResults();
   });
 
-  clear.addEventListener("click", () => {
-    input.value = "";
-    searchTerm = "";
-    bar.classList.add("hidden");
-    hint.classList.add("hidden");
-    _render(rootData);
-  });
+  clear.addEventListener("click", resetSearch);
 
-  input.addEventListener("input", () => {
-    searchTerm = input.value.trim();
-    if (!searchTerm) {
-      _render(rootData);
+  const renderResults = (matches) => {
+    results.innerHTML = "";
+    if (matches.length === 0) {
+      results.innerHTML = `<div class="search-result-empty">لا يوجد شخص بهذا الاسم</div>`;
+      results.classList.remove("hidden");
       return;
     }
+    matches.forEach((m, i) => {
+      const item = document.createElement("div");
+      item.className = "search-result-item" + (i === activeIdx ? " active" : "");
+      const lineage = m.ancestors.length
+        ? `<span class="search-result-lineage">${lineageText(m.node.name, m.ancestors)}</span>`
+        : `<span class="search-result-lineage">الجذر</span>`;
+      item.innerHTML = `<span class="search-result-name">${m.node.name}</span>${lineage}`;
+      item.addEventListener("click", () => {
+        focusNode(m.node);
+        closeResults();
+      });
+      results.appendChild(item);
+    });
+    results.classList.remove("hidden");
+  };
 
-    // ابحث عن كل العقد المطابقة
-    const matches = findAllNodes(rootData, searchTerm);
-    if (matches.length > 0) {
-      // افتح الفروع حتى الوصول لكل عقدة مطابقة
-      matches.forEach(m => expandPathTo(rootData, m._id));
-      _render(rootData);
-
-      // ضبط العرض ليشمل كل النتائج
-      setTimeout(() => {
-        const matchIds = new Set(matches.map(m => m._id));
-        const nodeEls = content.selectAll(".node").filter(d => matchIds.has(d.data._id));
-        if (!nodeEls.empty()) {
-          const xs = [], ys = [];
-          nodeEls.each(d => { xs.push(d.x); ys.push(d.y); });
-          const minX = Math.min(...xs), maxX = Math.max(...xs);
-          const minY = Math.min(...ys), maxY = Math.max(...ys);
-          const W = svg.node().clientWidth, H = svg.node().clientHeight;
-          const boxW = (maxX - minX) + 240;   // هامش
-          const boxH = (maxY - minY) + 200;
-          const scale = Math.max(0.4, Math.min(1.6, 0.85 * Math.min(W / boxW, H / boxH)));
-          const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-          const t = d3.zoomIdentity
-            .translate(W / 2 - scale * cx, H / 2 - scale * cy)
-            .scale(scale);
-          svg.transition().duration(500).call(zoom.transform, t);
-        }
-      }, 100);
-    }
+  input.addEventListener("input", () => {
+    const q = input.value.trim();
+    if (!q) { closeResults(); return; }
+    currentMatches = findMatchesWithLineage(rootData, q);
+    activeIdx = -1;
+    renderResults(currentMatches);
   });
 
-  // البحث بـ Enter
+  // تنقّل بالأسهم + اختيار بـ Enter + إغلاق بـ Escape
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      input.value = "";
-      searchTerm = "";
-      bar.classList.add("hidden");
-      hint.classList.add("hidden");
-      _render(rootData);
+    if (e.key === "Escape") { resetSearch(); return; }
+    if (results.classList.contains("hidden") || currentMatches.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, currentMatches.length - 1);
+      renderResults(currentMatches);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      renderResults(currentMatches);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const pick = activeIdx >= 0 ? currentMatches[activeIdx] : currentMatches[0];
+      if (pick) { focusNode(pick.node); closeResults(); }
     }
   });
 }
